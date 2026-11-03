@@ -31,7 +31,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   // Hashed build assets never change: cache first.
-  if (url.pathname.startsWith("/_next/static/") || /\.(png|svg|woff2?|ico)$/.test(url.pathname)) {
+  if (url.pathname.startsWith("/_next/static/") || /\.(png|svg|woff2?|ico|wasm)$/.test(url.pathname)) {
     event.respondWith(
       caches.match(req).then(
         (hit) =>

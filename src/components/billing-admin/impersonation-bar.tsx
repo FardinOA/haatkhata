@@ -40,10 +40,14 @@ export function ImpersonationBar() {
         disabled={busy}
         onClick={async () => {
           setBusy(true);
-          await fetch("/api/admin/impersonate/exit", { method: "POST" }).catch(() => {});
+          const r = await fetch("/api/auth/impersonation/exit", { method: "POST" })
+            .then((res) => res.json())
+            .catch(() => ({}));
+          // Drop the owner's data from this device; the admin console tab is still signed in.
           useStore.setState((s) => Object.assign(s, initialState()));
-          router.replace("/admin");
-          router.refresh();
+          if (window.opener) window.close();
+          if (r.adminUrl) window.location.href = r.adminUrl;
+          else router.replace("/login");
         }}
         className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-cash px-3 font-semibold text-[#2b1a00] hover:brightness-105 disabled:opacity-60"
       >

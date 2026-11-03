@@ -14,6 +14,10 @@ const { users, sessions, otpCodes, memberships, businesses } = schema;
 
 export const SESSION_COOKIE = "bk_session";
 const SESSION_DAYS = 30;
+/** The admin console (its own app and domain) signs in separately, on its own cookie, for a working day at most. */
+export const ADMIN_COOKIE = "bk_admin";
+const ADMIN_SESSION_HOURS = 12;
+const HANDOFF_TTL_MS = 60_000;
 const OTP_TTL_MS = 5 * 60_000; // NFR-SEC-03
 const OTP_PER_PHONE_PER_HOUR = 5;
 const OTP_PER_IP_PER_HOUR = 30;
@@ -74,16 +78,25 @@ export async function verifyOtp(rawPhone: string, code: string) {
 
 /* ------------------------------------------------------------ sessions */
 
-export async function createSession(userId: string, meta: { ip?: string; userAgent?: string; businessId?: string | null; impersonatedBy?: string }) {
+export async function createSession(
+  userId: string,
+  meta: { ip?: string; userAgent?: string; businessId?: string | null; impersonatedBy?: string },
+  cookie: { name: string; maxAge: number } = { name: SESSION_COOKIE, maxAge: SESSION_DAYS * 86_400 },
+) {
   const token = randomBytes(32).toString("base64url");
+  // undefined = open the user's first shop; null = no shop (admin sessions).
   const businessId =
-    meta.businessId ??
-    (await db.select({ id: memberships.businessId }).from(memberships).where(and(eq(memberships.userId, userId), eq(memberships.status, "active"))).orderBy(memberships.createdAt).limit(1))[0]?.id ??
-    null;
+    meta.businessId !== undefined
+      ? meta.businessId
+      : ((await db.select({ id: memberships.businessId }).from(memberships).where(and(eq(memberships.userId, userId), eq(memberships.status, "active"))).orderBy(memberships.createdAt).limit(1))[0]?.id ?? null);
   await db.insert(sessions).values({ id: newId("s_"), tokenHash: sha256(token), userId, businessId, ip: meta.ip, userAgent: meta.userAgent?.slice(0, 300), impersonatedBy: meta.impersonatedBy });
   const jar = await cookies();
-  jar.set(SESSION_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: SESSION_DAYS * 86_400 });
+  jar.set(cookie.name, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: cookie.maxAge });
   return token;
+}
+
+export function createAdminSession(userId: string, meta: { ip?: string; userAgent?: string }) {
+  return createSession(userId, { ...meta, businessId: null }, { name: ADMIN_COOKIE, maxAge: ADMIN_SESSION_HOURS * 3600 });
 }
 
 export type AuthContext = {
@@ -112,6 +125,46 @@ export async function getAuth(token?: string): Promise<AuthContext | null> {
     role = m ? await resolveRole(row.s.businessId, m.role) : row.s.impersonatedBy ? "owner" : null;
   }
   return { sessionId: row.s.id, user: row.u, businessId: role ? row.s.businessId : null, role, impersonatedBy: row.s.impersonatedBy };
+}
+
+/** The admin console's session, read only from its own cookie and only while it's younger than a working day. */
+export async function getAdminAuth(): Promise<AuthContext | null> {
+  const t = (await cookies()).get(ADMIN_COOKIE)?.value;
+  if (!t) return null;
+  const a = await getAuth(t);
+  if (!a) return null;
+  const [s] = await db.select({ createdAt: sessions.createdAt }).from(sessions).where(eq(sessions.id, a.sessionId));
+  return s && Date.now() - s.createdAt.getTime() <= ADMIN_SESSION_HOURS * 3_600_000 ? a : null;
+}
+
+export async function clearAdminCookie() {
+  (await cookies()).delete(ADMIN_COOKIE);
+}
+
+/**
+ * A one-minute, signed ticket the admin console hands to the shop app so an
+ * admin can open a shop as its owner in a new tab. The console's own session
+ * never changes hands; the shop app turns the ticket into an owner session.
+ */
+export type Handoff = { owner: string; admin: string; business: string; nonce: string; exp: number };
+
+export function signHandoff(p: Pick<Handoff, "owner" | "admin" | "business">, now = Date.now()) {
+  const body = Buffer.from(JSON.stringify({ ...p, nonce: randomBytes(12).toString("base64url"), exp: now + HANDOFF_TTL_MS })).toString("base64url");
+  return `${body}.${hmac(`handoff:${body}`)}`;
+}
+
+/** The ticket's contents if the signature holds and it hasn't expired; single use is checked by the caller. */
+export function readHandoff(ticket: string, now = Date.now()): Handoff | null {
+  const [body, sig] = ticket.split(".");
+  if (!body || !sig) return null;
+  const want = hmac(`handoff:${body}`);
+  if (sig.length !== want.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(want))) return null;
+  try {
+    const p = JSON.parse(Buffer.from(body, "base64url").toString()) as Handoff;
+    return p.exp > now ? p : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function requireAuth(): Promise<AuthContext> {

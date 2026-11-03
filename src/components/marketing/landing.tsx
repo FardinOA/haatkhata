@@ -12,7 +12,10 @@ import { FaqChat } from "./faq-chat";
 import { Footer } from "./footer";
 import { Hero } from "./hero";
 import { JourneyScroll } from "./journey-scroll";
-import { H2, LogoMark, makeN, SiteCtx, SWATCHES, useSite, type L, type Site } from "./site-kit";
+import { PhoneScan } from "./phone-scan";
+import { RouteMap } from "./route-map";
+import { H2, JamdaniWeave, LogoMark, makeN, SiteCtx, SWATCHES, useSite, useSmoothScroll, type L, type Site } from "./site-kit";
+import "lenis/dist/lenis.css";
 import { normalizePhone } from "@/lib/domain";
 import { themeVars } from "@/lib/theme";
 
@@ -37,6 +40,7 @@ export function Landing() {
   const [shop, setShop] = useState("");
   const [accent, setAccent] = useState(SWATCHES[0].hex);
   const [signedIn, setSignedIn] = useState(false);
+  useSmoothScroll();
 
   useEffect(() => {
     try {
@@ -87,9 +91,10 @@ export function Landing() {
         <Nav signedIn={signedIn} />
         <main>
           <Hero signedIn={signedIn} />
-          <Channels />
+          <RouteMap />
           <JourneyScroll />
           <DashboardShowcase />
+          <PhoneScan />
           <Bento />
           <Pricing />
           <FaqChat />
@@ -108,15 +113,24 @@ const useT = useSite;
 function Nav({ signedIn }: { signedIn: boolean }) {
   const { t, lang, setLang } = useT();
   const [open, setOpen] = useState(false);
+  // Clear over the hero glow at the top; frosted once the page moves under it.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const sync = () => setScrolled(window.scrollY > 8);
+    sync();
+    window.addEventListener("scroll", sync, { passive: true });
+    return () => window.removeEventListener("scroll", sync);
+  }, []);
   const links = [
     ["#how", t("How it works", "কীভাবে কাজ করে")],
     ["#dashboard", t("Dashboard", "ড্যাশবোর্ড")],
+    ["#scan", t("Phone scanner", "ফোন স্ক্যানার")],
     ["#features", t("Features", "সুবিধা")],
     ["#pricing", t("Pricing", "দাম")],
     ["#faq", t("Questions", "প্রশ্ন")],
   ];
   return (
-    <header className="sticky top-0 z-40 border-b border-line/70 bg-canvas/80 backdrop-blur-xl">
+    <header className={cn("sticky top-0 z-40 border-b transition-[background-color,border-color] duration-300", scrolled || open ? "border-line/70 bg-canvas/80 backdrop-blur-xl" : "border-transparent")}>
       <nav className="mx-auto flex h-14 max-w-[1120px] items-center gap-2 px-5 md:px-8" aria-label={t("Main", "প্রধান")}>
         <Link href="/" className="mr-auto flex shrink-0 items-center gap-2 md:mr-0 xl:w-[290px]">
           <LogoMark size={28} />
@@ -124,7 +138,8 @@ function Nav({ signedIn }: { signedIn: boolean }) {
         </Link>
         <div className="hidden flex-1 items-center justify-center gap-1 md:flex">
           {links.map(([href, label]) => (
-            <a key={href} href={href} className="whitespace-nowrap rounded-full px-2.5 py-1.5 text-[13px] text-ink-2 transition-colors hover:text-ink lg:px-3 lg:text-[13.5px]">
+            // Six links don't fit beside the buttons: the FAQ lives in the menu and footer, Dashboard returns from lg.
+            <a key={href} href={href} className={cn("whitespace-nowrap rounded-full px-2.5 py-1.5 text-[13px] text-ink-2 transition-colors hover:text-ink lg:px-3 lg:text-[13.5px]", href === "#faq" && "hidden", href === "#dashboard" && "hidden lg:inline")}>
               {label}
             </a>
           ))}
@@ -164,65 +179,6 @@ function Nav({ signedIn }: { signedIn: boolean }) {
         </div>
       )}
     </header>
-  );
-}
-
-/* ------------------------------------------------------------ channels marquee */
-
-/**
- * Not a logo strip: the names a seller already uses, in the order their money
- * moves. Orders come in on these, go out with these, and come back through these.
- */
-function Channels() {
-  const { t } = useT();
-  const groups: { label: string; items: [string, string][] }[] = [
-    {
-      label: t("Orders come in on", "অর্ডার আসে"),
-      items: [
-        ["Facebook", "#0866FF"],
-        ["Instagram", "#D62976"],
-        ["WhatsApp", "#1FAF55"],
-        ["TikTok", "#121212"],
-        [t("Your counter", "দোকানের কাউন্টার"), "#45453F"],
-      ],
-    },
-    {
-      label: t("Parcels go out with", "পার্সেল যায়"),
-      items: [
-        ["Steadfast", ""],
-        ["Pathao", ""],
-        ["RedX", ""],
-        ["Paperfly", ""],
-        ["Carrybee", ""],
-      ],
-    },
-    {
-      label: t("Money comes back via", "টাকা ফেরে"),
-      items: [
-        [t("bKash", "বিকাশ"), "#E2136E"],
-        [t("Nagad", "নগদ"), "#EC1C24"],
-        [t("Courier payout", "কুরিয়ার পেআউট"), ""],
-      ],
-    },
-  ];
-  return (
-    <section aria-label={t("Works with", "যেগুলোর সাথে কাজ করে")} className="bg-surface-2">
-      <ol className="mx-auto grid max-w-[1120px] gap-8 px-5 py-14 text-center md:grid-cols-3 md:px-8 md:py-16">
-        {groups.map((g) => (
-          <li key={g.label}>
-            <p className="text-[13px] text-ink-3">{g.label}</p>
-            <p className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5 font-display text-[17px] font-semibold tracking-[-0.01em] text-ink">
-              {g.items.map(([name, dot]) => (
-                <span key={name} className="inline-flex items-center gap-1.5">
-                  {dot && <span aria-hidden className="size-2 rounded-full" style={{ background: dot }} />}
-                  {name}
-                </span>
-              ))}
-            </p>
-          </li>
-        ))}
-      </ol>
-    </section>
   );
 }
 
@@ -305,8 +261,8 @@ function Pricing() {
         </div>
         <p className="mt-6 text-[14px] text-ink-3">
           {t(
-            `Pay with bKash, Nagad or card. Change or cancel any time; your data is never locked. Parcels assume about ৳${n(RETURN_COST)} lost on each return, delivery out and back.`,
-            `বিকাশ, নগদ বা কার্ডে পেমেন্ট। যেকোনো সময় বদলান বা বন্ধ করুন; আপনার তথ্য কখনো আটকায় না। প্রতিটা ফেরত পার্সেলে যাওয়া-আসায় আনুমানিক ৳${n(RETURN_COST)} খরচ ধরা হয়েছে।`,
+            `Pay with bKash. Change or cancel any time; your data is never locked. Parcels assume about ৳${n(RETURN_COST)} lost on each return, delivery out and back.`,
+            `বিকাশে পেমেন্ট। যেকোনো সময় বদলান বা বন্ধ করুন; আপনার তথ্য কখনো আটকায় না। প্রতিটা ফেরত পার্সেলে যাওয়া-আসায় আনুমানিক ৳${n(RETURN_COST)} খরচ ধরা হয়েছে।`,
           )}
         </p>
       </div>
@@ -341,35 +297,31 @@ function FinalCta() {
   const [phone, setPhone] = useState("");
   const ok = !!normalizePhone(phone);
   return (
-    <section className="bg-surface-2 px-5 py-28 md:py-40">
-      <div className="mx-auto flex max-w-[760px] flex-col items-center text-center">
-        <H2 className="text-balance">{t("Your first invoice is five minutes away.", "প্রথম ইনভয়েস মাত্র পাঁচ মিনিট দূরে।")}</H2>
-        <form
-          className="mt-10 w-full max-w-[460px] min-w-0"
-          onSubmit={(e) => {
-            e.preventDefault();
-            router.push(`/login${ok ? `?phone=${normalizePhone(phone)}` : ""}`);
-          }}
-        >
-          <label htmlFor="cta-phone" className="text-[14px] text-ink-3">
-            {t("Start with your mobile number", "মোবাইল নম্বর দিয়ে শুরু করুন")}
-          </label>
-          <div className="mt-3 flex rounded-full bg-surface p-1.5 shadow-[0_0_0_1px_rgb(18_18_18/0.06),0_12px_30px_-14px_rgb(18_18_18/0.2)]">
-            <span className="grid place-items-center pl-4 pr-1 text-[15px] font-medium text-ink-3">+88</span>
-            <input
-              id="cta-phone"
-              inputMode="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="017XXXXXXXX"
-              className="tnum w-0 min-w-0 flex-1 bg-transparent px-2 text-[16px] text-ink placeholder:text-ink-4 focus:outline-none"
-            />
-            <button type="submit" className="inline-flex h-12 shrink-0 items-center rounded-full bg-ink px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-85">
-              {t("Start", "শুরু")}
-            </button>
-          </div>
-          <p className="mt-4 text-[13.5px] text-ink-3">{t("No setup fee. Bangla support on WhatsApp.", "সেটআপ ফি নেই। হোয়াটসঅ্যাপে বাংলায় সাপোর্ট।")}</p>
-        </form>
+    <section className="px-5 pb-6 md:px-6">
+      <div className="relative mx-auto max-w-[1240px] overflow-hidden rounded-[36px] bg-brand px-6 py-16 text-brand-contrast md:px-14 md:py-24">
+        <JamdaniWeave className="pointer-events-none absolute inset-0 size-full" color="var(--brand-contrast)" opacity={0.09} />
+        <div className="relative grid grid-cols-[minmax(0,1fr)] items-end gap-10 lg:grid-cols-[minmax(0,1fr)_420px]">
+          <h2 className="font-display text-[40px] font-semibold leading-[1] tracking-[-0.03em] sm:text-[56px] lg:text-[72px]">{t("Your first invoice is five minutes away.", "প্রথম ইনভয়েস মাত্র পাঁচ মিনিট দূরে।")}</h2>
+          <form
+            className="min-w-0"
+            onSubmit={(e) => {
+              e.preventDefault();
+              router.push(`/login${ok ? `?phone=${normalizePhone(phone)}` : ""}`);
+            }}
+          >
+            <label htmlFor="cta-phone" className="text-[14px] text-brand-contrast/80">
+              {t("Start with your mobile number", "মোবাইল নম্বর দিয়ে শুরু করুন")}
+            </label>
+            <div className="mt-2 flex rounded-full bg-white p-1.5 shadow-3">
+              <span className="grid place-items-center pl-4 pr-1 text-[15px] font-medium text-ink-3">+88</span>
+              <input id="cta-phone" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="017XXXXXXXX" className="tnum w-0 min-w-0 flex-1 bg-transparent px-2 text-[16px] text-ink placeholder:text-ink-4 focus:outline-none" />
+              <button type="submit" className="inline-flex h-12 shrink-0 items-center rounded-full bg-ink px-6 text-[15px] font-semibold text-white">
+                {t("Start", "শুরু")}
+              </button>
+            </div>
+            <p className="mt-3 text-[13px] text-brand-contrast/70">{t("No setup fee. Bangla support on WhatsApp.", "সেটআপ ফি নেই। হোয়াটসঅ্যাপে বাংলায় সাপোর্ট।")}</p>
+          </form>
+        </div>
       </div>
     </section>
   );

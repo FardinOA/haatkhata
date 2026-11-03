@@ -6,7 +6,7 @@ export const PLANS = [
   { name: ["Pro", "প্রো"], price: 1999, orders: 10000, products: ["Unlimited products", "আনলিমিটেড পণ্য"], users: ["Unlimited users", "আনলিমিটেড ইউজার"], extra: [["Custom roles & audit log", "নিজের রোল ও অডিট লগ"], ["Several shops, priority support", "একাধিক দোকান, অগ্রাধিকার সাপোর্ট"]], who: ["Brands & hybrid shops", "ব্র্যান্ড ও দোকান+অনলাইন"] },
 ] as const;
 
-export type Proof = "catalogue" | "offline" | "print" | "cod" | "staff" | "data";
+export type Proof = "catalogue" | "offline" | "print" | "cod" | "staff" | "data" | "scan";
 
 /** Questions sellers ask, the proof each answer shows, and the words (both languages) a typed question is matched on. */
 /** `chip: false` answers typed questions but stays out of the suggestions (pricing already shows it). */
@@ -30,10 +30,16 @@ export const FAQ: { q: [string, string]; a: [string, string]; proof?: Proof; kw:
     kw: ["print", "printer", "thermal", "receipt", "label", "sticker", "a4", "a5", "memo", "paper", "প্রিন্ট", "প্রিন্টার", "থার্মাল", "রসিদ", "লেবেল", "স্টিকার", "মেমো", "কাগজ"],
   },
   {
+    q: ["Do I need a barcode scanner?", "বারকোড স্ক্যানার কিনতে হবে?"],
+    a: ["No. Your phone's camera is the scanner. Selling from the phone, it scans straight into the cart; at a computer, scan its QR once and the phone sends every barcode to it over the internet. Print your own barcode labels too. A USB scanner works if you already have one.", "না। ফোনের ক্যামেরাই স্ক্যানার। ফোনে বিক্রি করলে সোজা কার্টে স্ক্যান হয়; কম্পিউটারে বিক্রি করলে তার QR একবার স্ক্যান করুন, ফোন প্রতিটি বারকোড কম্পিউটারে পাঠিয়ে দেবে। নিজের বারকোড লেবেলও প্রিন্ট করতে পারবেন। আগে থেকে USB স্ক্যানার থাকলে সেটাও চলে।"],
+    proof: "scan",
+    kw: ["scanner", "scan", "barcode", "barcode label", "camera", "qr", "gun", "sku", "বারকোড লেবেল", "স্ক্যানার", "স্ক্যান", "বারকোড", "ক্যামেরা", "কিউআর"],
+  },
+  {
     q: ["How does it handle couriers and COD?", "কুরিয়ার আর COD কীভাবে সামলায়?"],
     a: ["Every order carries its courier, tracking number and the exact COD to collect. When the courier pays you, mark the payout and BechaKena shows what's still out there, courier by courier.", "প্রতিটা অর্ডারে কুরিয়ার, ট্র্যাকিং নম্বর আর কত COD আদায় করতে হবে তা থাকে। কুরিয়ার টাকা দিলে পেআউট মার্ক করুন — কোন কুরিয়ারের কাছে কত বাকি সব দেখা যায়।"],
     proof: "cod",
-    kw: ["courier", "cod", "cash on delivery", "steadfast", "pathao", "redx", "paperfly", "delivery", "parcel", "tracking", "payout", "কুরিয়ার", "ডেলিভারি", "পার্সেল", "ক্যাশ", "স্টেডফাস্ট", "পাঠাও", "ট্র্যাকিং"],
+    kw: ["courier", "cod", "cash on delivery", "steadfast", "sundarban", "delivery", "parcel", "tracking", "payout", "কুরিয়ার", "ডেলিভারি", "পার্সেল", "ক্যাশ", "স্টেডফাস্ট", "সুন্দরবন", "ট্র্যাকিং"],
   },
   {
     q: ["Can my staff use it without seeing my profit?", "স্টাফ ব্যবহার করবে, কিন্তু আমার লাভ দেখবে না?"],
@@ -50,7 +56,7 @@ export const FAQ: { q: [string, string]; a: [string, string]; proof?: Proof; kw:
 
   {
     q: ["How do I pay?", "পেমেন্ট কীভাবে করব?"],
-    a: ["bKash, Nagad or card, monthly or yearly. Pay yearly and get two months off. No setup fee. The plans are in the pricing section above.", "বিকাশ, নগদ বা কার্ডে, মাসিক বা বার্ষিক। বার্ষিক দিলে দুই মাস ছাড়। সেটআপ ফি নেই। প্ল্যানগুলো ওপরের দামের অংশে আছে।"],
+    a: ["With bKash, monthly or yearly. Pay yearly and get two months off. No setup fee. The plans are in the pricing section above.", "বিকাশে, মাসিক বা বার্ষিক। বার্ষিক দিলে দুই মাস ছাড়। সেটআপ ফি নেই। প্ল্যানগুলো ওপরের দামের অংশে আছে।"],
     chip: false,
     kw: ["pay", "price", "cost", "bkash", "nagad", "card", "plan", "fee", "yearly", "monthly", "subscription", "পেমেন্ট", "দাম", "বিকাশ", "নগদ", "খরচ", "প্ল্যান", "ফি", "কত টাকা"],
   },

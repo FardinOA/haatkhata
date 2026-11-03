@@ -21,6 +21,7 @@ import { CommandPalette, useCommandPalette } from "./command-palette";
 import { NAV, NAV_GROUPS } from "./nav";
 import { AccountMenu, DemoNotice, SyncBridge, SyncStatus } from "./account";
 import { ServiceWorker } from "./service-worker";
+import { PhoneScannerButton, PhoneScannerProvider } from "../scan/phone-scanner-provider";
 import { useFmt, useHotkey, useHydrated, useNow, useT } from "@/lib/hooks";
 import { ImpersonationBar } from "../billing-admin/impersonation-bar";
 import { PinLock } from "../billing-admin/pin-lock";
@@ -96,7 +97,7 @@ function Shell({ children }: { children: ReactNode }) {
   useHotkey("n", () => router.push("/pos"));
 
   return (
-    <>
+    <PhoneScannerProvider>
       <ThemeSync />
       <ServiceWorker />
       <SyncBridge />
@@ -112,7 +113,7 @@ function Shell({ children }: { children: ReactNode }) {
       </div>
       <MobileTabBar />
       <CommandPalette {...palette} />
-    </>
+    </PhoneScannerProvider>
   );
 }
 
@@ -403,6 +404,7 @@ function Topbar({ onSearch }: { onSearch: () => void }) {
             <Translate className="size-4" />
             {lang === "en" ? "বাংলা" : "English"}
           </button>
+          <PhoneScannerButton className="pointer-coarse:hidden" />
           <Notifications />
         </div>
       </div>

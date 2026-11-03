@@ -133,6 +133,8 @@ describe("inbox", () => {
 
 describe("AI order parsing", () => {
   const text = "Assalamu alaikum\nনাম: ফারহানা চৌধুরী\n০১৮১৫-৪৪৩৩২২\nবাসা ১৪, রোড ৩, মিরপুর ১০, ঢাকা\nKRT-M 2ta";
+  // No size given, so the free reader can't pick a variant and the AI is worth asking.
+  const vague = "Assalamu alaikum\nনাম: ফারহানা চৌধুরী\n০১৮১৫-৪৪৩৩২২\nবাসা ১৪, রোড ৩, মিরপুর ১০, ঢাকা\n2ta kurti";
 
   it("falls back to the rule parser without an API key", async () => {
     setAnthropicClient(null);
@@ -140,7 +142,17 @@ describe("AI order parsing", () => {
     const r = await withTenant(s.businessId, (tx) => parseOrder(tx, s.businessId, text));
     expect(r.source).toBe("rules");
     expect(r.phone).toBe("01815443322");
-    expect(r.items[0]).toMatchObject({ variantId: "v_m" });
+    expect(r.items[0]).toMatchObject({ variantId: "v_m", qty: 2 });
+  });
+
+  it("doesn't spend an AI read when the free reader already got everything", async () => {
+    const parse = vi.fn();
+    setAnthropicClient({ beta: { messages: { parse } } } as never);
+    const s = await shop();
+    const r = await withTenant(s.businessId, (tx) => parseOrder(tx, s.businessId, text));
+    expect(parse).not.toHaveBeenCalled();
+    expect(r).toMatchObject({ source: "rules", usage: { used: 0, limit: 10 } });
+    setAnthropicClient(null);
   });
 
   it("uses Claude's structured output, keeps only catalogue variants, and counts credits", async () => {
@@ -151,7 +163,7 @@ describe("AI order parsing", () => {
     });
     setAnthropicClient({ beta: { messages: { parse } } } as never);
     const s = await shop();
-    const r = await withTenant(s.businessId, (tx) => parseOrder(tx, s.businessId, text));
+    const r = await withTenant(s.businessId, (tx) => parseOrder(tx, s.businessId, vague));
     expect(r.source).toBe("ai");
     expect(r.phone).toBe("01815443322");
     expect(r.district).toBe("Dhaka");
@@ -161,7 +173,7 @@ describe("AI order parsing", () => {
     ]);
     expect(r.usage.used).toBe(1);
     const req = parse.mock.calls[0][0];
-    expect(req.model).toBe("claude-opus-5-5");
+    expect(req.model).toBe("claude-haiku-5-5");
     expect(req.system[1].cache_control).toEqual({ type: "ephemeral" });
     expect(req.system[1].text).toContain("v_m | KRT-M");
   });
@@ -169,7 +181,7 @@ describe("AI order parsing", () => {
   it("falls back to rules when the API call fails", async () => {
     setAnthropicClient({ beta: { messages: { parse: vi.fn().mockRejectedValue(new Error("network down")) } } } as never);
     const s = await shop();
-    const r = await withTenant(s.businessId, (tx) => parseOrder(tx, s.businessId, text));
+    const r = await withTenant(s.businessId, (tx) => parseOrder(tx, s.businessId, vague));
     expect(r.source).toBe("rules");
     setAnthropicClient(null);
   });

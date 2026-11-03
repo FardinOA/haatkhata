@@ -13,12 +13,15 @@ describe("typed FAQ questions", () => {
     expect(proofOf("বিকাশে টাকা দিতে পারব?")).toBe("pay");
     expect(proofOf("থার্মাল প্রিন্টারে চলবে?")).toBe("print");
     expect(proofOf("নেট না থাকলে কী হবে")).toBe("offline");
+    expect(proofOf("বারকোড স্ক্যানার লাগবে?")).toBe("scan");
   });
 
   it("matches English", () => {
     expect(proofOf("can I pay with bkash?")).toBe("pay");
-    expect(proofOf("Does it work with Pathao?")).toBe("cod");
+    expect(proofOf("Does it work with Sundarban?")).toBe("cod");
     expect(proofOf("can my staff see profit")).toBe("staff");
+    expect(proofOf("do I need a barcode scanner?")).toBe("scan");
+    expect(proofOf("can I print barcode labels")).toBe("scan");
   });
 
   it("doesn't match a keyword hidden inside another word", () => {

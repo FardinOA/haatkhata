@@ -9,6 +9,7 @@ import { Button, cn, Textarea } from "@/components/ui/core";
 import { Dialog } from "@/components/ui/overlays";
 import { formatPhone } from "@/lib/domain";
 import { useFmt, useT } from "@/lib/hooks";
+import { matchItems } from "@/lib/match-items";
 import { parseMessage, type ParsedMessage } from "./parse-message";
 
 const SAMPLE = "Assalamu alaikum apu\nনাম: ফারহানা চৌধুরী\n০১৮১৫-৪৪৩৩২২\nবাসা ১৪, রোড ৩, মিরপুর ১০, ঢাকা\n2ta kurti M size, indigo";
@@ -19,15 +20,24 @@ export function QuickPaste({ open, onClose, onApply }: { open: boolean; onClose:
   const f = useFmt();
   const [text, setText] = useState("");
   const rules = useMemo(() => parseMessage(text), [text]);
-  // AI reading (account mode): better names/addresses and matched cart items.
-  const accountMode = useStore((s) => s.sync.mode === "account");
   const products = useStore((s) => s.products);
+  // Items are matched on this device against the shop's own products: instant and free.
+  const catalog = useMemo(
+    () => products.filter((p) => p.status === "active").flatMap((p) => p.variants.filter((v) => v.active).map((v) => ({ productId: p.id, variantId: v.id, sku: v.sku, name: p.name, nameBn: p.nameBn, options: Object.values(v.options).join(" / ") }))),
+    [products],
+  );
+  const ruleItems = useMemo(() => matchItems(rules.leftover ?? "", catalog), [rules.leftover, catalog]);
+  // AI reading (account mode, paid plans): only offered when the free reader missed something.
+  const accountMode = useStore((s) => s.sync.mode === "account");
   const { addVariant } = usePos();
   const [ai, setAi] = useState<{ text: string; result: AiParsed } | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [picked, setPicked] = useState<Record<number, boolean>>({});
   const aiNow = ai && ai.text === text ? ai.result : null;
+  const items = aiNow?.items ?? ruleItems;
+  const isPicked = (k: number) => picked[k] ?? !!items[k]?.variantId;
+  const complete = rules.found.phone && rules.found.address && ruleItems.length > 0 && ruleItems.every((i) => i.variantId);
   const parsed: ParsedMessage = aiNow
     ? {
         name: aiNow.name ?? rules.name,
@@ -37,7 +47,7 @@ export function QuickPaste({ open, onClose, onApply }: { open: boolean; onClose:
         found: { name: !!(aiNow.name ?? rules.name), phone: !!(aiNow.phone ?? rules.phone), address: !!(aiNow.address || aiNow.area || rules.found.address) },
       }
     : rules;
-  const any = parsed.found.name || parsed.found.phone || parsed.found.address || !!aiNow?.items.some((i) => i.variantId);
+  const any = parsed.found.name || parsed.found.phone || parsed.found.address || items.some((i) => i.variantId);
   const readWithAi = async () => {
     setAiBusy(true);
     setAiError(null);
@@ -81,7 +91,7 @@ export function QuickPaste({ open, onClose, onApply }: { open: boolean; onClose:
             disabled={!any}
             onClick={() => {
               onApply(parsed);
-              aiNow?.items.forEach((i, k) => i.variantId && picked[k] && addVariant(i.variantId, i.qty));
+              items.forEach((i, k) => i.variantId && isPicked(k) && addVariant(i.variantId, i.qty));
               setText("");
               setAi(null);
               onClose();
@@ -92,11 +102,14 @@ export function QuickPaste({ open, onClose, onApply }: { open: boolean; onClose:
         </>
       }
     >
-      <p className="text-[13px] text-ink-3">{t("We'll pick out the name, phone and address — Bangla, Banglish or English.", "নাম, ফোন আর ঠিকানা আমরা খুঁজে নেব — বাংলা, বাংলিশ বা ইংরেজি।")}</p>
+      <p className="text-[13px] text-ink-3">{t("We'll pick out the name, phone, address and items — Bangla, Banglish or English.", "নাম, ফোন, ঠিকানা আর পণ্য আমরা খুঁজে নেব — বাংলা, বাংলিশ বা ইংরেজি।")}</p>
       <Textarea
         data-autofocus
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value);
+          setPicked({});
+        }}
         rows={5}
         placeholder={SAMPLE}
         className="mt-3 font-[inherit]"
@@ -107,10 +120,10 @@ export function QuickPaste({ open, onClose, onApply }: { open: boolean; onClose:
           {t("Try a sample message", "একটি নমুনা মেসেজ দেখুন")}
         </button>
       )}
-      {text && accountMode && (
+      {text && accountMode && (!complete || aiNow) && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Button size="sm" variant={aiNow ? "ghost" : "soft"} loading={aiBusy} icon={<Sparkle className="size-4" weight="fill" />} onClick={readWithAi} disabled={text.trim().length < 3}>
-            {aiNow ? t("Read again", "আবার পড়ুন") : t("Read with AI — items too", "AI দিয়ে পড়ুন — পণ্যসহ")}
+            {aiNow ? t("Read again", "আবার পড়ুন") : t("Fill the gaps with AI", "বাকিটা AI দিয়ে পড়ুন")}
           </Button>
           {aiNow && (
             <span className="text-xs text-ink-3">
@@ -132,14 +145,14 @@ export function QuickPaste({ open, onClose, onApply }: { open: boolean; onClose:
             parsed.address && [parsed.address.line, parsed.address.area, parsed.address.district].filter(Boolean).join(", "),
             parsed.found.address,
           )}
-          {aiNow && aiNow.items.length > 0 && (
+          {items.length > 0 && (
             <div className="rounded-md border border-line bg-surface-2 p-2">
               <p className="px-1 pb-1.5 text-xs font-medium text-ink-3">{t("Items they asked for", "যে পণ্য চেয়েছেন")}</p>
-              {aiNow.items.map((it, k) => {
+              {items.map((it, k) => {
                 const hit = it.variantId ? getVariant(products, it.variantId) : null;
                 return (
                   <label key={k} className={cn("flex items-center gap-2.5 rounded-sm px-1.5 py-1.5", hit ? "cursor-pointer hover:bg-surface" : "opacity-70")}>
-                    <input type="checkbox" className="size-4 accent-[var(--brand)]" disabled={!hit} checked={!!picked[k]} onChange={(e) => setPicked((p) => ({ ...p, [k]: e.target.checked }))} />
+                    <input type="checkbox" className="size-4 accent-[var(--brand)]" disabled={!hit} checked={isPicked(k)} onChange={(e) => setPicked((p) => ({ ...p, [k]: e.target.checked }))} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-ink">{hit ? `${hit.p.name}${Object.values(hit.v.options).length ? ` · ${Object.values(hit.v.options).join(" / ")}` : ""}` : it.text}</span>
                       <span className="block truncate text-xs text-ink-3">{hit ? `“${it.text}”` : t("No matching product — add it by hand", "মেলেনি — হাতে যোগ করুন")}</span>
@@ -150,7 +163,7 @@ export function QuickPaste({ open, onClose, onApply }: { open: boolean; onClose:
               })}
             </div>
           )}
-          {parsed.leftover && (
+          {parsed.leftover && !items.length && (
             <p className="px-1 pt-1 text-xs text-ink-3">
               {t("Also in the message:", "মেসেজে আরও আছে:")} <span className="text-ink-2">{parsed.leftover}</span>
             </p>

@@ -7,19 +7,65 @@ import { randomBytes } from "node:crypto";
 import { and, desc, eq, gte, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "../db";
 import { adminActions, announcements, printQuota, subscriptionPayments } from "../db/schema-billing";
+import { aiUsage, smsCredits, smsLog } from "../db/schema-platform";
+import { AI_CREDITS, currentMonth } from "../ai/parse-order";
 import { counts } from "../billing/service";
-import { EXPIRED_PLAN, effectivePlan, isPaidPlan, PLANS, type PlanId } from "../billing/plans";
+import { EXPIRED_PLAN, effectivePlan, isPaidPlan, PLAN_ORDER, PLANS, type PlanId, type StoredPlan } from "../billing/plans";
 import { printLimit } from "../billing/print-quota";
 import { HttpError } from "../http";
-import type { AuthContext } from "../auth/session";
+import { readHandoff, requestOtp, signHandoff, type AuthContext } from "../auth/session";
+import { normalizePhone } from "@/lib/domain";
 
-const { businesses, memberships, users, orders, commandLog, auditLog } = schema;
+const { businesses, memberships, users, orders, commandLog, auditLog, otpCodes } = schema;
 const DAY = 86_400_000;
 
+/**
+ * What the platform pays per unit, for the running-cost estimate. Haiku 5.5 list
+ * prices (US$ per million tokens), the business plan's ৳122 = $1, and a typical
+ * non-masked OTP rate. Customer SMS isn't here: shops prepay it as credits.
+ */
+export const UNIT_COST = { aiInputPerMTok: 0.1, aiOutputPerMTok: 0.5, bdtPerUsd: 122, otpSms: 0.35 };
+
+/** Start of the current month in Dhaka, matching how ai_usage counts months. */
+const monthStart = (now: Date) => new Date(`${currentMonth(now)}-01T00:00:00+06:00`);
 export function requireSuperAdmin(auth: AuthContext | null): asserts auth is AuthContext {
   if (!auth) throw new HttpError(401, "Please sign in");
   // While impersonating, the session belongs to the shop owner — admin tools stay off.
   if (!auth.user.isSuperAdmin || auth.impersonatedBy) throw new HttpError(403, "This area is for BechaKena staff only");
+}
+
+/**
+ * Sign-in codes for the admin console go only to staff numbers. Anyone else
+ * gets the same answer and no SMS, so the form says nothing about who is staff
+ * and can't be used to run up the SMS bill.
+ */
+export async function requestAdminOtp(rawPhone: string, ip: string) {
+  const phone = normalizePhone(rawPhone);
+  if (!phone) throw new HttpError(400, "Enter a Bangladeshi mobile number like 017XXXXXXXX");
+  const [u] = await db.select({ isSuperAdmin: users.isSuperAdmin }).from(users).where(eq(users.phone, phone));
+  if (!u?.isSuperAdmin) return { phone, devCode: undefined };
+  return requestOtp(phone, ip);
+}
+
+/** A ticket that opens this shop as its owner in the shop app, logged with the reason. */
+export async function startImpersonation(adminUserId: string, businessId: string, reason: string) {
+  const owner = await impersonationTarget(adminUserId, businessId, reason);
+  return signHandoff({ owner, admin: adminUserId, business: businessId });
+}
+
+/**
+ * The shop app redeems a ticket once: it must be signed, unexpired, unused,
+ * and its admin must still be staff. Returns who to sign in as.
+ */
+export async function claimImpersonation(ticket: string) {
+  const t = readHandoff(ticket);
+  if (!t) throw new HttpError(400, "This link has expired. Start again from the admin console.");
+  const [admin] = await db.select({ isSuperAdmin: users.isSuperAdmin }).from(users).where(eq(users.id, t.admin));
+  if (!admin?.isSuperAdmin) throw new HttpError(403, "This area is for BechaKena staff only");
+  const used = await db.select({ id: adminActions.id }).from(adminActions).where(and(eq(adminActions.action, "impersonate.claim"), sql`${adminActions.details}->>'nonce' = ${t.nonce}`));
+  if (used.length) throw new HttpError(400, "This link has already been used. Start again from the admin console.");
+  await logAdmin(t.admin, "impersonate.claim", t.business, null, { nonce: t.nonce, ownerUserId: t.owner });
+  return t;
 }
 
 export async function logAdmin(adminUserId: string, action: string, businessId: string | null, reason: string | null, details?: Record<string, unknown>) {
@@ -28,7 +74,9 @@ export async function logAdmin(adminUserId: string, action: string, businessId: 
 
 export async function overview(now = new Date()) {
   const weekAgo = new Date(now.getTime() - 7 * DAY);
-  const [[tenants], [active], [trials], planRows, weeks, mrrRows, [signups]] = await Promise.all([
+  const month = currentMonth(now);
+  const since = monthStart(now);
+  const [[tenants], [active], [trials], planRows, weeks, mrrRows, [signups], [ai], [otp], [sms], size] = await Promise.all([
     db.select({ n: sql<number>`count(*)::int` }).from(businesses),
     db.select({ n: sql<number>`count(distinct ${orders.businessId})::int` }).from(orders).where(gte(orders.createdAt, weekAgo)),
     db.select({ n: sql<number>`count(*)::int` }).from(businesses).where(eq(businesses.plan, "trial")),
@@ -43,7 +91,12 @@ export async function overview(now = new Date()) {
       from (select distinct on (business_id) amount, months, credit_months from subscription_payments
             where status = 'paid' and period_end > now() order by business_id, paid_at desc) p`),
     db.select({ n: sql<number>`count(*)::int` }).from(businesses).where(gte(businesses.createdAt, weekAgo)),
+    db.select({ reads: sql<number>`coalesce(sum(${aiUsage.requests}), 0)::int`, input: sql<number>`coalesce(sum(${aiUsage.inputTokens}), 0)::float`, output: sql<number>`coalesce(sum(${aiUsage.outputTokens}), 0)::float` }).from(aiUsage).where(eq(aiUsage.month, month)),
+    db.select({ n: sql<number>`count(*)::int` }).from(otpCodes).where(gte(otpCodes.createdAt, since)),
+    db.select({ parts: sql<number>`coalesce(sum(${smsLog.parts}), 0)::int` }).from(smsLog).where(and(eq(smsLog.status, "sent"), gte(smsLog.at, since))),
+    db.execute(sql`select pg_database_size(current_database())::float as bytes`),
   ]);
+  const aiUsd = (ai.input * UNIT_COST.aiInputPerMTok + ai.output * UNIT_COST.aiOutputPerMTok) / 1e6;
   return {
     tenants: tenants.n,
     activeThisWeek: active.n,
@@ -52,32 +105,83 @@ export async function overview(now = new Date()) {
     plans: Object.fromEntries(planRows.map((r) => [r.plan, r.n])),
     ordersPerWeek: (weeks.rows as { week: string; n: number }[]).map((r) => ({ week: new Date(r.week).toISOString(), n: r.n })),
     mrr: Math.round((mrrRows.rows[0] as { mrr: number }).mrr),
+    costs: {
+      month,
+      aiReads: ai.reads,
+      aiBdt: Math.round(aiUsd * UNIT_COST.bdtPerUsd),
+      otpTexts: otp.n,
+      otpBdt: Math.round(otp.n * UNIT_COST.otpSms),
+      customerSms: sms.parts,
+      dbBytes: (size.rows[0] as { bytes: number }).bytes,
+    },
   };
 }
 
-export async function searchBusinesses(q: string) {
+/** Lists to work through: who needs a nudge, who is about to pay, who is slipping away. */
+export const SEGMENTS = ["all", "trial_ending", "never_ordered", "paying", "going_quiet"] as const;
+export type Segment = (typeof SEGMENTS)[number];
+
+function segmentWhere(segment: Segment, now: Date) {
+  const hasOrders = sql`exists (select 1 from orders o where o.business_id = ${businesses.id} and o.status <> 'draft')`;
+  const recentlyActive = sql`exists (select 1 from command_log c where c.business_id = ${businesses.id} and c.applied_at > ${new Date(now.getTime() - 7 * DAY)})`;
+  switch (segment) {
+    case "trial_ending":
+      return and(eq(businesses.plan, "trial"), sql`${businesses.trialEndsAt} < ${new Date(now.getTime() + 3 * DAY)}`);
+    case "never_ordered":
+      return and(sql`not ${hasOrders}`, sql`${businesses.createdAt} < ${new Date(now.getTime() - DAY)}`);
+    case "paying":
+      return inArray(businesses.plan, PLAN_ORDER);
+    case "going_quiet":
+      return and(inArray(businesses.plan, PLAN_ORDER), sql`not ${recentlyActive}`);
+    default:
+      return undefined;
+  }
+}
+
+/** How many shops are in each work list right now, for the overview's "needs attention" queue. */
+export async function segmentCounts(now = new Date()) {
+  const lists = SEGMENTS.filter((x): x is Exclude<Segment, "all"> => x !== "all");
+  const rows = await Promise.all(lists.map((seg) => db.select({ n: sql<number>`count(*)::int` }).from(businesses).where(segmentWhere(seg, now))));
+  return Object.fromEntries(lists.map((seg, i) => [seg, rows[i][0].n])) as Record<Exclude<Segment, "all">, number>;
+}
+
+export async function searchBusinesses(q: string, segment: Segment = "all", now = new Date()) {
   const term = q.trim();
   const ownerPhones = term.replace(/\D/g, "").length >= 4 ? await db.select({ b: memberships.businessId }).from(memberships).innerJoin(users, eq(users.id, memberships.userId)).where(ilike(users.phone, `%${term.replace(/\D/g, "")}%`)) : [];
   const where = term
     ? or(ilike(businesses.name, `%${term}%`), eq(businesses.id, term), eq(businesses.referralCode, term.toUpperCase()), ownerPhones.length ? inArray(businesses.id, ownerPhones.map((r) => r.b)) : undefined)
     : undefined;
-  const rows = await db.select().from(businesses).where(where).orderBy(desc(businesses.createdAt)).limit(50);
+  const rows = await db.select().from(businesses).where(and(where, segmentWhere(segment, now))).orderBy(desc(businesses.createdAt)).limit(50);
   const ids = rows.map((r) => r.id);
-  const orderCounts = ids.length
-    ? await db
-        .select({ b: orders.businessId, n: sql<number>`count(*)::int` })
-        .from(orders)
-        .where(and(inArray(orders.businessId, ids), gte(orders.createdAt, new Date(Date.now() - 30 * DAY)), ne(orders.status, "draft")))
-        .groupBy(orders.businessId)
-    : [];
+  const [orderCounts, lastSeen] = ids.length
+    ? await Promise.all([
+        db
+          .select({ b: orders.businessId, n: sql<number>`count(*)::int` })
+          .from(orders)
+          .where(and(inArray(orders.businessId, ids), gte(orders.createdAt, new Date(now.getTime() - 30 * DAY)), ne(orders.status, "draft")))
+          .groupBy(orders.businessId),
+        db.select({ b: commandLog.businessId, at: sql<Date>`max(${commandLog.appliedAt})` }).from(commandLog).where(inArray(commandLog.businessId, ids)).groupBy(commandLog.businessId),
+      ])
+    : [[], []];
   const byId = new Map(orderCounts.map((r) => [r.b, r.n]));
-  return rows.map((b) => ({ id: b.id, name: b.name, phone: b.phone, plan: b.plan, createdAt: b.createdAt.toISOString(), orders30d: byId.get(b.id) ?? 0, renewsAt: (b.plan === "trial" ? b.trialEndsAt : b.planRenewsAt)?.toISOString() ?? null }));
+  const seenById = new Map(lastSeen.map((r) => [r.b, new Date(r.at).toISOString()]));
+  return rows.map((b) => ({
+    id: b.id,
+    name: b.name,
+    phone: b.phone,
+    plan: b.plan,
+    createdAt: b.createdAt.toISOString(),
+    orders30d: byId.get(b.id) ?? 0,
+    lastActiveAt: seenById.get(b.id) ?? null,
+    renewsAt: (b.plan === "trial" ? b.trialEndsAt : b.planRenewsAt)?.toISOString() ?? null,
+  }));
 }
 
 export async function businessDetail(businessId: string) {
   const [b] = await db.select().from(businesses).where(eq(businesses.id, businessId));
   if (!b) throw new HttpError(404, "Business not found");
-  const [members, usage, activity, audit, payments, actions, [prints]] = await Promise.all([
+  const month = currentMonth();
+  const [members, usage, activity, audit, payments, actions, [prints], [ai], [sms], [credits]] = await Promise.all([
     db
       .select({ userId: users.id, name: users.name, phone: users.phone, role: memberships.role, status: memberships.status })
       .from(memberships)
@@ -89,6 +193,9 @@ export async function businessDetail(businessId: string) {
     db.select().from(subscriptionPayments).where(eq(subscriptionPayments.businessId, businessId)).orderBy(desc(subscriptionPayments.createdAt)).limit(12),
     db.select().from(adminActions).where(eq(adminActions.businessId, businessId)).orderBy(desc(adminActions.at)).limit(15),
     db.select({ n: sql<number>`count(*)::int` }).from(printQuota).where(eq(printQuota.bucket, `biz:${businessId}`)),
+    db.select().from(aiUsage).where(and(eq(aiUsage.businessId, businessId), eq(aiUsage.month, month))),
+    db.select({ parts: sql<number>`coalesce(sum(${smsLog.parts}), 0)::int` }).from(smsLog).where(and(eq(smsLog.businessId, businessId), eq(smsLog.status, "sent"), gte(smsLog.at, monthStart(new Date())))),
+    db.select({ balance: sql<number>`coalesce(sum(${smsCredits.delta}), 0)::int` }).from(smsCredits).where(eq(smsCredits.businessId, businessId)),
   ]);
   const plan = effectivePlan(b.plan);
   return {
@@ -96,6 +203,8 @@ export async function businessDetail(businessId: string) {
     limits: plan.limits,
     usage,
     prints: isPaidPlan(b.plan) ? null : { used: prints.n, limit: printLimit() },
+    ai: { used: ai?.requests ?? 0, limit: AI_CREDITS[b.plan as StoredPlan] ?? 0 },
+    sms: { sentThisMonth: sms.parts, balance: credits.balance },
     members,
     activity: activity.map((a) => ({ ...a, at: a.at.toISOString() })),
     audit: audit.map((a) => ({ id: a.id, action: a.action, user: a.userName, at: a.at.toISOString() })),

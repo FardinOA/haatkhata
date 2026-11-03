@@ -227,6 +227,17 @@ body {
   to { stroke-dashoffset: 0; }
 }
 
+/* Something arriving: a cart line, a scan result. */
+@keyframes bk-rise {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+/* Camera-scanner sweep line. */
+@keyframes bk-scan {
+  from { top: 12%; }
+  to { top: 88%; }
+}
+
 @keyframes shimmer {
   from { background-position: -200% 0; }
   to { background-position: 200% 0; }
@@ -308,3 +319,5 @@ body {
   to { transform: translateY(-105%); }
 }
 @keyframes bk-marquee { to { transform: translateX(-50%); } }
+/* Draws an SVG stroke in; the path needs pathLength="1" and stroke-dasharray="1". */
+@keyframes bk-draw { from { stroke-dashoffset: 1; } }

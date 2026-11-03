@@ -8,10 +8,12 @@ import type { CommandPayload, CommandType } from "@/lib/commands";
 import { maxDiscountPct } from "@/lib/domain";
 import type { Role } from "@/lib/types";
 import { applyCommand } from "../apply";
-import { businessDetail, impersonationTarget, requireSuperAdmin, resetPrints } from "../admin/service";
+import { businessDetail, claimImpersonation, impersonationTarget, overview, requestAdminOtp, requireSuperAdmin, resetPrints, searchBusinesses, startImpersonation, UNIT_COST } from "../admin/service";
+import { currentMonth } from "../ai/parse-order";
+import { aiUsage } from "../db/schema-platform";
 import { hashPin, PIN_MAX_FAILS, setPin, verifyPin } from "../auth/pin";
 import { resolveRole, saveCustomRole } from "../auth/roles";
-import { expireTrial, type AuthContext } from "../auth/session";
+import { expireTrial, readHandoff, signHandoff, type AuthContext } from "../auth/session";
 import { createBusiness } from "../business";
 import { db, schema, withTenant } from "../db";
 import { adminActions, referralCredits, subscriptionPayments } from "../db/schema-billing";
@@ -239,6 +241,66 @@ describe("super-admin (FR-ADM-01)", () => {
     expect(owner).toBe(s.userId);
     const [log] = await db.select().from(adminActions).where(and(eq(adminActions.businessId, s.businessId), eq(adminActions.action, "impersonate.start")));
     expect(log).toMatchObject({ adminUserId: admin, reason: "Customer asked for help with invoices" });
+  });
+
+  it("only sends admin sign-in codes to staff, without saying who is staff", async () => {
+    const admin = await makeUser("Admin", true);
+    const [a] = await db.select().from(schema.users).where(eq(schema.users.id, admin));
+    const owner = await makeUser("Owner");
+    const [o] = await db.select().from(schema.users).where(eq(schema.users.id, owner));
+    const ip = `10.9.${Math.floor(Math.random() * 250)}.1`;
+    expect((await requestAdminOtp(a.phone, ip)).devCode).toMatch(/^\d{6}$/);
+    const other = await requestAdminOtp(o.phone, ip);
+    expect(other).toEqual({ phone: o.phone, devCode: undefined });
+    const codes = await db.select().from(schema.otpCodes).where(eq(schema.otpCodes.phone, o.phone));
+    expect(codes).toHaveLength(0);
+  });
+
+  it("signs handoff tickets that expire and can't be altered", () => {
+    const now = Date.now();
+    const t = signHandoff({ owner: "u_o", admin: "u_a", business: "b_1" }, now);
+    expect(readHandoff(t, now)).toMatchObject({ owner: "u_o", admin: "u_a", business: "b_1" });
+    expect(readHandoff(t, now + 61_000)).toBeNull();
+    const [body, sig] = t.split(".");
+    const forged = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(body, "base64url").toString()), owner: "u_someone_else" })).toString("base64url");
+    expect(readHandoff(`${forged}.${sig}`, now)).toBeNull();
+    expect(readHandoff("garbage", now)).toBeNull();
+  });
+
+  it("lets a ticket open the shop once, and only while its admin is still staff", async () => {
+    const admin = await makeUser("Admin", true);
+    const s = await shop();
+    const ticket = await startImpersonation(admin, s.businessId, "Owner asked for help with couriers");
+    expect(await claimImpersonation(ticket)).toMatchObject({ owner: s.userId, admin, business: s.businessId });
+    await expect(claimImpersonation(ticket)).rejects.toThrow(/already been used/);
+    const again = await startImpersonation(admin, s.businessId, "Second look at the courier setup");
+    await db.update(schema.users).set({ isSuperAdmin: false }).where(eq(schema.users.id, admin));
+    await expect(claimImpersonation(again)).rejects.toThrow(/staff only/);
+  });
+
+  it("sorts shops into onboarding segments", async () => {
+    const quiet = await shop("business");
+    const fresh = await shop();
+    const later = new Date(Date.now() + 2 * 86_400_000);
+    const ids = async (segment: Parameters<typeof searchBusinesses>[1]) => (await searchBusinesses("", segment, later)).map((r) => r.id);
+    // A brand-new paying shop with no synced changes is "going quiet" a couple of days later.
+    expect(await ids("paying")).toContain(quiet.businessId);
+    expect(await ids("going_quiet")).toContain(quiet.businessId);
+    expect(await ids("paying")).not.toContain(fresh.businessId);
+    // Two days in, a new shop's 7-day trial still has 5 days left, so it isn't "ending" yet.
+    expect(await ids("trial_ending")).not.toContain(fresh.businessId);
+    expect(await ids("never_ordered")).toEqual(expect.arrayContaining([quiet.businessId, fresh.businessId]));
+  });
+
+  it("totals this month's AI cost from recorded tokens", async () => {
+    const s = await shop("pro");
+    const before = (await overview()).costs;
+    await db.insert(aiUsage).values({ businessId: s.businessId, month: currentMonth(), requests: 3, inputTokens: 2_000_000, outputTokens: 400_000 });
+    const after = (await overview()).costs;
+    expect(after.aiReads - before.aiReads).toBe(3);
+    const expected = ((2 * UNIT_COST.aiInputPerMTok + 0.4 * UNIT_COST.aiOutputPerMTok) * UNIT_COST.bdtPerUsd);
+    expect(Math.abs(after.aiBdt - before.aiBdt - expected)).toBeLessThanOrEqual(1);
+    expect((await businessDetail(s.businessId)).ai).toEqual({ used: 3, limit: 800 });
   });
 });
 

@@ -131,3 +131,31 @@ export function barcodeFor(value: string): { kind: "ean13" | "code128"; widths: 
   if (isValidEan13(value)) return { kind: "ean13", widths: bitsToWidths(ean13Bits(value)), text: value };
   return { kind: "code128", widths: code128(value), text: value };
 }
+
+/**
+ * A fresh in-store EAN-13 (GS1 prefix 2 = restricted circulation, never
+ * clashes with a manufacturer's code) that isn't in `taken`.
+ */
+export function inStoreEan13(taken: Set<string>): string {
+  for (;;) {
+    let body = "2";
+    while (body.length < 12) body += Math.floor(Math.random() * 10);
+    const code = body + eanCheckDigit(body);
+    if (!taken.has(code)) return code;
+  }
+}
+
+/**
+ * The variant a scanned code points at — by barcode or SKU, ignoring case.
+ * UPC-A scans (12 digits) also match the same code stored as EAN-13 ("0…").
+ */
+export function findByCode<P extends { variants: { sku: string; barcode?: string }[] }>(products: P[], raw: string): { p: P; v: P["variants"][number] } | null {
+  const code = raw.trim().toLowerCase();
+  if (!code) return null;
+  const alts = /^\d{12}$/.test(code) ? [code, `0${code}`] : [code];
+  for (const p of products) {
+    const v = p.variants.find((x) => alts.includes(x.barcode?.trim().toLowerCase() ?? "") || alts.includes(x.sku.toLowerCase()));
+    if (v) return { p, v };
+  }
+  return null;
+}

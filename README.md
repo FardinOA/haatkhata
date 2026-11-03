@@ -15,8 +15,8 @@ npm run dev                      # http://localhost:3000
 - **Sign in** with any Bangladeshi mobile number. With `SMS_DRIVER=console` the code is printed in the server log and shown on screen (development only).
 - **Explore without an account:** the demo shop runs entirely on the device.
 - **Tests:** `npm run test` (unit) · `npm run test:server` (against a throwaway Postgres database) · `npm run test:all`.
-- **Production:** `npm run build && npm start`, or build the `Dockerfile`. Health check: `/api/health`. Schedule `/api/cron/courier-sync` (every 15–30 min), `/api/cron/daily` (hourly) and `POST /api/billing/cron` (daily) with `Authorization: Bearer $CRON_SECRET`.
-- **Super-admin:** `npm run admin:grant -- 017XXXXXXXX`, then open `/admin`.
+- **Production:** the cheapest setup is one small VPS running [deploy/compose.yml](deploy/compose.yml) (app, Postgres, Caddy for HTTPS, the scheduled jobs and nightly backups to R2): `cp deploy/.env.example deploy/.env`, fill it in, then `docker compose -f deploy/compose.yml --env-file deploy/.env up -d --build`. The image applies migrations on start. Otherwise `npm run build && npm start`, or build the `Dockerfile`. Health check: `/api/health`. Schedule `/api/cron/courier-sync` (every 15–30 min), `/api/cron/daily` (hourly) and `POST /api/billing/cron` (daily) with `Authorization: Bearer $CRON_SECRET`.
+- **Super-admin:** the staff console is its own app in [../admin](../admin) (React + Vite, its own domain). Grant access with `npm run admin:grant -- 017XXXXXXXX`, then sign in there.
 
 ## What's in it
 

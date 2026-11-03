@@ -2,6 +2,7 @@
 
 import {
   Barcode,
+  Camera,
   CopySimple,
   DotsThree,
   DownloadSimple,
@@ -25,7 +26,10 @@ import { Badge, Button, Checkbox, cn, EmptyState, IconButton, Input, Segmented, 
 import { Menu, useToast } from "../ui/overlays";
 import { ImportSheet } from "./import-sheet";
 import { ShareCardSheet } from "./share-card";
+import { CameraScanner, primeScanFeedback } from "../scan/camera-scanner";
+import { usePhoneScanTarget } from "../scan/phone-scanner-provider";
 import { colourValues, downloadText, margin, priceRange, productStock, swatchFor, toCSV, avgCost } from "./utils";
+import { findByCode } from "@/lib/barcode";
 import { useCan, useDebounced, useFmt, useT } from "@/lib/hooks";
 import { useStore } from "@/lib/store";
 import type { Product } from "@/lib/types";
@@ -69,6 +73,7 @@ export function Catalog() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [share, setShare] = useState<Product | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   const catName = (id: string) => {
     const c = categories.find((x) => x.id === id);
@@ -155,8 +160,23 @@ export function Catalog() {
     toast({ title: t(`Exported ${list.length} products`, `${f.num(list.length)}টি পণ্য এক্সপোর্ট হয়েছে`) });
   };
 
+  /** Keyboard-wedge scanners type the code and press Enter — jump straight to that product. */
+  const openScanned = () => {
+    const hit = findByCode(products, q);
+    if (hit) router.push(`/products/${hit.p.id}`);
+  };
+
+  // A paired phone opens the scanned product here, like the camera button does.
+  usePhoneScanTarget((code) => {
+    const hit = findByCode(products, code);
+    if (!hit) return { ok: false, title: t("Not one of your products", "আপনার কোনো পণ্যের সাথে মেলেনি"), detail: code };
+    router.push(`/products/${hit.p.id}`);
+    return { ok: true, title: t(`Opened ${hit.p.name}`, `${hit.p.nameBn ?? hit.p.name} খোলা হয়েছে`), detail: code };
+  });
+
   const actionsFor = (p: Product) => [
     { label: t("Edit product", "পণ্য এডিট করুন"), icon: <PencilSimple />, onSelect: () => router.push(`/products/${p.id}`) },
+    { label: t("Print labels", "লেবেল প্রিন্ট"), icon: <Barcode />, onSelect: () => router.push(labelsHref([p])) },
     { label: t("Share card", "শেয়ার কার্ড"), icon: <ShareNetwork />, onSelect: () => setShare(p) },
     {
       label: t("Duplicate", "কপি করুন"),
@@ -185,6 +205,9 @@ export function Catalog() {
           <>
             <Button icon={<UploadSimple className="size-4" />} onClick={() => setImportOpen(true)}>
               {t("Import", "ইমপোর্ট")}
+            </Button>
+            <Button icon={<Barcode className="size-4" />} onClick={() => router.push("/labels")}>
+              {t("Print labels", "লেবেল প্রিন্ট")}
             </Button>
             <Link href="/products/new" className="inline-flex h-10 items-center gap-2 rounded-md bg-brand px-4 text-sm font-medium text-brand-contrast shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_1px_2px_rgb(0_0_0/0.12)] hover:brightness-[1.07]">
               <Plus className="size-4" weight="bold" />
@@ -224,8 +247,18 @@ export function Catalog() {
             placeholder={t("Search by name, SKU or barcode", "নাম, SKU বা বারকোড দিয়ে খুঁজুন")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && openScanned()}
             aria-label={t("Search products", "পণ্য খুঁজুন")}
           />
+          <Button
+            icon={<Camera className="size-4" />}
+            onClick={() => {
+              primeScanFeedback();
+              setScanning(true);
+            }}
+          >
+            {t("Scan", "স্ক্যান")}
+          </Button>
           <Segmented<StockFilter>
             ariaLabel={t("Stock level", "স্টকের অবস্থা")}
             value={stock}
@@ -348,7 +381,7 @@ export function Catalog() {
             CSV
           </Button>
           <Link
-            href={`/labels?v=${selectedProducts.flatMap((p) => p.variants.filter((v) => v.active).map((v) => `${v.id}:1`)).join(",")}`}
+            href={labelsHref(selectedProducts)}
             className="inline-flex h-8 items-center gap-1.5 rounded-sm border border-line-strong/80 bg-surface px-3 text-[13px] font-medium text-ink shadow-1 hover:bg-surface-2"
           >
             <Barcode className="size-4" />
@@ -370,8 +403,26 @@ export function Catalog() {
 
       <ShareCardSheet product={share} onClose={() => setShare(null)} />
       <ImportSheet open={importOpen} onClose={() => setImportOpen(false)} />
+      <CameraScanner
+        open={scanning}
+        onClose={() => setScanning(false)}
+        title={t("Find by barcode", "বারকোড দিয়ে খুঁজুন")}
+        sub={t("Scan a label to open that product.", "লেবেল স্ক্যান করলে পণ্যটি খুলবে।")}
+        onCode={(code) => {
+          const hit = findByCode(products, code);
+          if (!hit) return { ok: false, title: t("Not one of your products", "আপনার কোনো পণ্যের সাথে মেলেনি"), detail: code };
+          setScanning(false);
+          router.push(`/products/${hit.p.id}`);
+          return null;
+        }}
+      />
     </div>
   );
+}
+
+/** One label per active variant, ready to tweak on the labels page. */
+export function labelsHref(list: Product[]) {
+  return `/labels?v=${list.flatMap((p) => p.variants.filter((v) => v.active).map((v) => `${v.id}:1`)).join(",")}`;
 }
 
 function CatChip({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {

@@ -12,7 +12,7 @@ import type { Permission } from "./types";
  * Inline bilingual strings: `t("New order", "নতুন অর্ডার")`.
  * Keeps translations next to the UI they belong to.
  */
-function makeT(lang: "en" | "bn") {
+export function makeT(lang: "en" | "bn") {
   return Object.assign((en: string, bn: string) => (lang === "bn" ? bn : en), {
     pick: (b: Bi) => pick(b, lang),
     lang,

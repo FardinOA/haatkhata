@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import Lenis from "lenis";
 import { cn } from "../ui/core";
 
 export type L = "en" | "bn";
@@ -46,6 +47,33 @@ export function useInView<T extends Element>(threshold = 0.3) {
     return () => io.disconnect();
   }, [seen, threshold]);
   return [ref, seen] as const;
+}
+
+/** False while the visitor asks for reduced motion; follows the setting live. */
+export function useMotionOk() {
+  const [ok, setOk] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setOk(!mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return ok;
+}
+
+/**
+ * Inertial wheel scrolling for the marketing page, plus gliding in-page anchors
+ * that stop below the sticky nav. Touch keeps native scrolling, and reduced
+ * motion turns it off entirely.
+ */
+export function useSmoothScroll() {
+  const motion = useMotionOk();
+  useEffect(() => {
+    if (!motion) return;
+    const lenis = new Lenis({ autoRaf: true, lerp: 0.1, anchors: { offset: -72 } });
+    return () => lenis.destroy();
+  }, [motion]);
 }
 
 /** Section heading: big, tight, left aligned. */

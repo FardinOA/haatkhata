@@ -80,11 +80,12 @@ export function AccountMenu({ collapsed, bold }: { collapsed: boolean; bold: boo
   const userId = useStore((s) => s.sync.userId);
   const [businesses, setBusinesses] = useState<Biz[]>([]);
 
-  const load = () =>
+  const load = () => {
     fetch("/api/businesses")
       .then((r) => (r.ok ? r.json() : { businesses: [] }))
       .then((d) => setBusinesses(d.businesses ?? []))
       .catch(() => {});
+  };
 
   return (
     <Menu

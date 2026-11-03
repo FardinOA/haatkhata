@@ -1,8 +1,10 @@
-import { requireSuperAdmin, searchBusinesses } from "@/server/admin/service";
-import { getAuth } from "@/server/auth/session";
+import { requireSuperAdmin, searchBusinesses, SEGMENTS, type Segment } from "@/server/admin/service";
+import { getAdminAuth } from "@/server/auth/session";
 import { route } from "@/server/http";
 
 export const GET = route(async (req: Request) => {
-  requireSuperAdmin(await getAuth());
-  return { businesses: await searchBusinesses(new URL(req.url).searchParams.get("q") ?? "") };
+  requireSuperAdmin(await getAdminAuth());
+  const params = new URL(req.url).searchParams;
+  const segment = params.get("segment") as Segment;
+  return { businesses: await searchBusinesses(params.get("q") ?? "", SEGMENTS.includes(segment) ? segment : "all") };
 });

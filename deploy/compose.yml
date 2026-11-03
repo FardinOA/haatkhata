@@ -1,0 +1,93 @@
+# Production on one small VPS (2 vCPU / 4 GB is plenty for the first ~1,000 shops):
+# the app, Postgres, Caddy for HTTPS (serving the shop app and the admin console on
+# their own domains), the scheduled jobs and nightly off-site backups.
+#
+#   cp deploy/.env.example deploy/.env   # fill it in
+#   docker compose -f deploy/compose.yml --env-file deploy/.env up -d --build
+#
+# Put Cloudflare (free plan) in front of the domain for CDN and DDoS protection.
+services:
+  app:
+    build:
+      context: ..
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://bechakena:${POSTGRES_PASSWORD}@db:5432/bechakena
+      APP_URL: https://${DOMAIN}
+      # Where "exit impersonation" sends staff back to (read by the server at runtime).
+      NEXT_PUBLIC_ADMIN_URL: https://${ADMIN_DOMAIN}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      NODE_OPTIONS: --max-old-space-size=768
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bechakena
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: bechakena
+    # Sized to share a 4 GB box with the app.
+    command: postgres -c shared_buffers=512MB -c effective_cache_size=1536MB -c work_mem=8MB -c maintenance_work_mem=128MB -c max_connections=40
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bechakena"]
+      interval: 5s
+      retries: 20
+
+  # Caddy with the admin console's static build inside (../../admin/Dockerfile).
+  caddy:
+    build: ../../admin
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy:/data
+    depends_on:
+      - app
+
+  # The jobs README.md lists, called over the internal network.
+  cron:
+    image: alpine:3.20
+    restart: unless-stopped
+    environment:
+      CRON_SECRET: ${CRON_SECRET}
+    volumes:
+      - ./cron.sh:/cron.sh:ro
+    entrypoint: ["sh", "/cron.sh"]
+    depends_on:
+      - app
+
+  # Nightly pg_dump + uploads to an S3-compatible bucket (Cloudflare R2's free 10 GB is enough for a long time).
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PGHOST: db
+      PGUSER: bechakena
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: bechakena
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - uploads:/uploads:ro
+    entrypoint: ["sh", "/backup.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  uploads:
+  caddy:

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { barcodeFor, bitsToWidths, code128, code128Values, CODE128_PATTERNS, ean13Bits, eanCheckDigit, isValidEan13 } from "./barcode";
+import { barcodeFor, bitsToWidths, code128, code128Values, CODE128_PATTERNS, ean13Bits, eanCheckDigit, findByCode, inStoreEan13, isValidEan13 } from "./barcode";
 
 /** Reads Code 128 widths back into text — proves the encoder is reversible. */
 function decode128(widths: number[]): string {
@@ -67,5 +67,27 @@ describe("EAN-13", () => {
   it("picks EAN-13 for valid retail codes and Code 128 otherwise", () => {
     expect(barcodeFor("4006381333931").kind).toBe("ean13");
     expect(barcodeFor("JMD-101").kind).toBe("code128");
+  });
+
+  it("generates valid, unused in-store EAN-13 codes", () => {
+    const taken = new Set<string>();
+    for (let i = 0; i < 200; i++) {
+      const code = inStoreEan13(taken);
+      expect(isValidEan13(code)).toBe(true);
+      expect(code[0]).toBe("2");
+      expect(taken.has(code)).toBe(false);
+      taken.add(code);
+    }
+  });
+
+  it("finds a variant by barcode or SKU, including UPC-A scans of EAN-13 codes", () => {
+    const products = [
+      { id: "a", variants: [{ sku: "JMD-101", barcode: "0012345678905" }] },
+      { id: "b", variants: [{ sku: "PNJ-M" }, { sku: "PNJ-L", barcode: "2000000000015" }] },
+    ];
+    expect(findByCode(products, "2000000000015")?.v.sku).toBe("PNJ-L");
+    expect(findByCode(products, " jmd-101 ")?.p.id).toBe("a");
+    expect(findByCode(products, "012345678905")?.p.id).toBe("a");
+    expect(findByCode(products, "999")).toBeNull();
   });
 });

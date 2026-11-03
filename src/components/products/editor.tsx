@@ -3,6 +3,7 @@
 import {
   ArrowLeft,
   ArrowRight,
+  Barcode,
   CaretLeft,
   CopySimple,
   DotsThree,
@@ -24,6 +25,8 @@ import { ChipInput } from "./chip-input";
 import { ProductRail } from "./product-rail";
 import { ShareCardSheet } from "./share-card";
 import { compressImage, margin, nextSku, skuPrefixFrom, swatchFor } from "./utils";
+import { labelsHref } from "./catalog";
+import { inStoreEan13 } from "@/lib/barcode";
 import { useCan, useFmt, useT } from "@/lib/hooks";
 import { uid } from "@/lib/base-data";
 import { useStore } from "@/lib/store";
@@ -390,6 +393,12 @@ export function ProductEditor({ productId }: { productId?: string }) {
               width={210}
               items={[
                 {
+                  label: t("Print labels", "লেবেল প্রিন্ট"),
+                  icon: <Barcode />,
+                  onSelect: () =>
+                    dirty ? toast({ title: t("Save your changes first", "আগে পরিবর্তন সেভ করুন"), body: t("Labels print what's saved.", "সেভ করা তথ্যই লেবেলে যায়।"), tone: "warn" }) : router.push(labelsHref([existing])),
+                },
+                {
                   label: t("Duplicate", "কপি করুন"),
                   icon: <CopySimple />,
                   onSelect: () => {
@@ -712,6 +721,21 @@ export function ProductEditor({ productId }: { productId?: string }) {
                   };
                 })
               }
+              fillBarcodes={() =>
+                setDraft((d) => {
+                  const taken = new Set(products.flatMap((p) => p.variants.flatMap((v) => (v.barcode ? [v.barcode] : []))));
+                  d.variants.forEach((v) => v.barcode?.trim() && taken.add(v.barcode.trim()));
+                  return {
+                    ...d,
+                    variants: d.variants.map((v) => {
+                      if (v.barcode?.trim()) return v;
+                      const barcode = inStoreEan13(taken);
+                      taken.add(barcode);
+                      return { ...v, barcode };
+                    }),
+                  };
+                })
+              }
             />
           </Section>
         </div>
@@ -838,6 +862,7 @@ function VariantMatrix({
   prefix,
   setPrefix,
   regenerateSkus,
+  fillBarcodes,
 }: {
   draft: Draft;
   isNew: boolean;
@@ -850,6 +875,7 @@ function VariantMatrix({
   prefix: string;
   setPrefix: (p: string) => void;
   regenerateSkus: () => void;
+  fillBarcodes: () => void;
 }) {
   const t = useT();
   const f = useFmt();
@@ -878,6 +904,11 @@ function VariantMatrix({
           <Button size="sm" variant="ghost" onClick={regenerateSkus}>
             {t("Renumber", "নতুন নম্বর")}
           </Button>
+          {draft.variants.some((v) => !v.barcode?.trim()) && (
+            <Button size="sm" variant="ghost" icon={<Barcode className="size-4" />} onClick={fillBarcodes} title={t("Give every variant without a barcode its own scannable EAN-13", "বারকোড ছাড়া প্রতিটি ভ্যারিয়েন্টে নতুন EAN-13 দিন")}>
+              {t("Fill barcodes", "বারকোড দিন")}
+            </Button>
+          )}
         </div>
       </div>
       <div className="overflow-hidden rounded-md border border-line">

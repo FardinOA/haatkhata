@@ -1,12 +1,15 @@
 "use client";
 
-import { Barcode, MagnifyingGlass, X } from "@phosphor-icons/react";
+import { Camera, DeviceMobile, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { forwardRef, useMemo, useState } from "react";
 import { ProductThumb } from "@/components/bits";
+import { CameraScanner, primeScanFeedback, type ScanOutcome } from "@/components/scan/camera-scanner";
+import { usePhoneScanner, usePhoneScanTarget } from "@/components/scan/phone-scanner-provider";
 import { cn, Kbd } from "@/components/ui/core";
 import { useToast } from "@/components/ui/overlays";
+import { findByCode } from "@/lib/barcode";
 import { available } from "@/lib/domain";
-import { useFmt, useT } from "@/lib/hooks";
+import { useFmt, useMediaQuery, useT } from "@/lib/hooks";
 import { useStore } from "@/lib/store";
 import type { Product } from "@/lib/types";
 import { usePos } from "./use-pos";
@@ -69,6 +72,10 @@ export const ProductFinder = forwardRef<HTMLInputElement, { className?: string }
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string>("all");
   const [picker, setPicker] = useState<Product | null>(null);
+  const [scanning, setScanning] = useState(false);
+  // A computer (mouse/trackpad) pairs a phone; a phone or tablet uses its own camera. Width alone
+  // misjudges a narrow desktop window as a phone.
+  const desktop = !useMediaQuery("(pointer: coarse)");
 
   const popularity = useMemo(() => {
     const m = new Map<string, number>();
@@ -113,22 +120,36 @@ export const ProductFinder = forwardRef<HTMLInputElement, { className?: string }
 
   /** Keyboard-wedge scanners type the code and press Enter. */
   const onEnter = () => {
-    const code = q.trim().toLowerCase();
-    if (!code) return;
-    for (const p of active) {
-      const v = p.variants.find((x) => x.sku.toLowerCase() === code || x.barcode?.toLowerCase() === code);
-      if (v) {
-        addVariant(v.id);
-        toast({ title: t("Added to cart", "কার্টে যোগ হয়েছে"), body: `${p.name}${Object.keys(v.options).length ? ` · ${Object.values(v.options).join(" / ")}` : ""}` });
-        setQ("");
-        return;
-      }
+    const hit = findByCode(active, q);
+    if (hit) {
+      addVariant(hit.v.id);
+      toast({ title: t("Added to cart", "কার্টে যোগ হয়েছে"), body: `${hit.p.name}${Object.keys(hit.v.options).length ? ` · ${Object.values(hit.v.options).join(" / ")}` : ""}` });
+      setQ("");
+      return;
     }
     if (list.length === 1) {
       choose(list[0]);
       setQ("");
     }
   };
+
+  /** Phone-camera scans: add straight to the cart, but never past the stock on the shelf. */
+  const onScan = (code: string): ScanOutcome => {
+    const hit = findByCode(active, code);
+    if (!hit || !hit.v.active) return { ok: false, title: t("Not one of your products", "আপনার কোনো পণ্যের সাথে মেলেনি"), detail: code };
+    const name = t(hit.p.name, hit.p.nameBn ?? hit.p.name);
+    const opts = Object.values(hit.v.options).join(" / ");
+    const have = draft.lines.filter((l) => l.variantId === hit.v.id).reduce((n, l) => n + l.qty, 0);
+    if (!allowNegative && available(hit.v) - have <= 0) {
+      return { ok: false, title: t(`${name} — out of stock`, `${name} — স্টকে নেই`), detail: have ? t(`All ${have} in stock are already in the cart`, `স্টকের ${f.num(have)}টিই কার্টে আছে`) : opts || undefined };
+    }
+    addVariant(hit.v.id);
+    return { ok: true, title: name, detail: [opts, f.money(hit.v.price), t(`${have + 1} in cart`, `কার্টে ${f.num(have + 1)}টি`)].filter(Boolean).join(" · ") };
+  };
+
+  // On this screen a paired phone's scans go straight into the cart, under the same rules.
+  usePhoneScanTarget(onScan);
+  const { link: phoneLink, open: openPhoneLink } = usePhoneScanner();
 
   return (
     <div className={cn("flex min-w-0 flex-col", className)}>
@@ -147,17 +168,29 @@ export const ProductFinder = forwardRef<HTMLInputElement, { className?: string }
             }}
             placeholder={t("Search or scan — name, SKU, barcode", "খুঁজুন বা স্ক্যান করুন — নাম, SKU, বারকোড")}
             aria-label={t("Search products", "পণ্য খুঁজুন")}
-            className="h-12 w-full rounded-lg border border-line bg-surface pl-12 pr-28 text-[15px] text-ink shadow-1 placeholder:text-ink-4 focus:border-brand focus:shadow-[var(--ring)] focus:outline-none"
+            className="h-12 w-full rounded-lg border border-line bg-surface pl-12 pr-32 text-[15px] md:pr-40 text-ink shadow-1 placeholder:text-ink-4 focus:border-brand focus:shadow-[var(--ring)] focus:outline-none"
           />
-          <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-2">
-            {q ? (
+          <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-2">
+            {q && (
               <button type="button" onClick={() => setQ("")} className="grid size-7 place-items-center rounded-full text-ink-3 hover:bg-sunken" aria-label={t("Clear", "মুছুন")}>
                 <X className="size-4" />
               </button>
-            ) : (
-              <Barcode className="size-5 text-ink-4" aria-hidden />
             )}
             <span className="hidden md:inline"><Kbd>F2</Kbd></span>
+            <button
+              type="button"
+              onClick={() => {
+                primeScanFeedback();
+                if (desktop) openPhoneLink({ onUseCamera: () => setScanning(true) });
+                else setScanning(true);
+              }}
+              title={phoneLink.phone ? t("Phone scanner connected", "ফোন স্ক্যানার যুক্ত") : undefined}
+              className="relative inline-flex h-8 items-center gap-1.5 rounded-md bg-ink px-3 text-[13px] font-medium text-white transition-[filter] hover:brightness-125 active:translate-y-px"
+            >
+              {desktop ? <DeviceMobile className="size-4" weight="bold" /> : <Camera className="size-4" weight="bold" />}
+              {t("Scan", "স্ক্যান")}
+              {phoneLink.phone && <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-ok ring-2 ring-surface" aria-hidden />}
+            </button>
           </div>
         </div>
         <div className="no-scrollbar -mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 [mask-image:linear-gradient(to_right,#000_90%,transparent)] pr-8" role="tablist" aria-label={t("Categories", "ক্যাটাগরি")}>
@@ -249,6 +282,7 @@ export const ProductFinder = forwardRef<HTMLInputElement, { className?: string }
         </ul>
       )}
       <VariantPicker product={picker} onClose={() => setPicker(null)} />
+      <CameraScanner open={scanning} onClose={() => setScanning(false)} onCode={onScan} />
     </div>
   );
 });

@@ -1,22 +1,30 @@
 import "server-only";
 /**
- * AI order parsing (SRS FR-POS-10, v2): turns a pasted Messenger/WhatsApp chat
+ * Order parsing (SRS FR-POS-10, v2): turns a pasted Messenger/WhatsApp chat
  * in Bangla, Banglish or English into customer details and cart items matched
- * against the business's own catalogue. Falls back to the rule-based parser
- * when no API key is configured, credits are used up, or the call fails.
+ * against the business's own catalogue.
+ *
+ * The free rule-based reader always runs first. Claude is only asked when the
+ * rules left something out, an API key is configured and the shop's plan
+ * still has AI reads this month; any failure falls back to the rules.
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { parseMessage } from "@/components/pos/parse-message";
 import { DISTRICTS } from "@/lib/geo";
 import { normalizePhone } from "@/lib/domain";
+import { matchItems } from "@/lib/match-items";
 import { schema, type Tx } from "../db";
 import { aiUsage } from "../db/schema-platform";
+import type { StoredPlan } from "../billing/plans";
 
-export const AI_MODEL = "claude-opus-5-5";
-export const AI_MONTHLY_CREDITS = Number(process.env.AI_MONTHLY_CREDITS ?? 500);
+/** Extraction against a short catalogue is light work: the smallest model reads it for about ৳0.1. */
+export const AI_MODEL = "claude-haiku-5-5";
+
+/** AI reads per month by plan. The free reader handles most chats; these only cover the messy ones. */
+export const AI_CREDITS: Record<StoredPlan, number> = { trial: 10, expired: 0, starter: 50, business: 200, pro: 800 };
 
 export type CatalogEntry = { productId: string; variantId: string; sku: string; name: string; nameBn?: string; options: string; price: number; available: number };
 
@@ -81,14 +89,10 @@ export async function loadCatalog(tx: Tx): Promise<CatalogEntry[]> {
     .map((r) => ({ productId: r.productId, variantId: r.variantId, sku: r.sku, name: r.name, nameBn: r.nameBn ?? undefined, options: Object.values(r.options).join(" / "), price: r.price, available: r.onHand - r.reserved }));
 }
 
-/** Rule-based fallback, with simple SKU / product-name matching for items. */
+/** The free reader: customer details from parseMessage, items from matchItems. */
 export function parseWithRules(text: string, catalog: CatalogEntry[]): ParsedOrder {
   const p = parseMessage(text);
-  const items: ParsedOrder["items"] = [];
-  const hay = text.toLowerCase();
-  for (const e of catalog) {
-    if (hay.includes(e.sku.toLowerCase())) items.push({ productId: e.productId, variantId: e.variantId, text: e.sku, qty: 1 });
-  }
+  const items = matchItems(p.leftover ?? "", catalog);
   const filled = [p.found.name, p.found.phone, p.found.address].filter(Boolean).length;
   return {
     name: p.name,
@@ -103,9 +107,15 @@ export function parseWithRules(text: string, catalog: CatalogEntry[]): ParsedOrd
   };
 }
 
+/** Good enough to skip the AI: phone and address found, and every item asked for pinned to a variant. */
+export function rulesComplete(r: ParsedOrder) {
+  return !!r.phone && !!(r.address || r.area) && r.items.length > 0 && r.items.every((i) => i.variantId);
+}
+
 export async function monthlyUsage(tx: Tx, businessId: string, month = currentMonth()) {
   const [row] = await tx.select().from(aiUsage).where(sql`${aiUsage.businessId} = ${businessId} and ${aiUsage.month} = ${month}`);
-  return { month, used: row?.requests ?? 0, limit: AI_MONTHLY_CREDITS };
+  const [b] = await tx.select({ plan: schema.businesses.plan }).from(schema.businesses).where(eq(schema.businesses.id, businessId));
+  return { month, used: row?.requests ?? 0, limit: AI_CREDITS[(b?.plan ?? "expired") as StoredPlan] ?? 0 };
 }
 
 export function currentMonth(d = new Date()) {
@@ -138,16 +148,14 @@ function getClient() {
 export async function parseOrder(tx: Tx, businessId: string, text: string): Promise<ParsedOrder & { usage: { used: number; limit: number } }> {
   const catalog = await loadCatalog(tx);
   const usage = await monthlyUsage(tx, businessId);
+  const rules = parseWithRules(text, catalog);
   const anthropic = getClient();
-  if (!anthropic || usage.used >= usage.limit) return { ...parseWithRules(text, catalog), usage };
+  if (rulesComplete(rules) || !anthropic || usage.used >= usage.limit) return { ...rules, usage };
 
   try {
     const response = await anthropic.beta.messages.parse({
       model: AI_MODEL,
       max_tokens: 8000,
-      // Server-side refusal fallback: if the model declines, the API retries on a fallback model in the same call.
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
       output_config: { effort: "low", format: betaZodOutputFormat(AiOrder) },
       system: [
         { type: "text", text: SYSTEM },
@@ -158,7 +166,7 @@ export async function parseOrder(tx: Tx, businessId: string, text: string): Prom
     });
     await recordUsage(tx, businessId, { input: response.usage.input_tokens, output: response.usage.output_tokens });
     const out = response.stop_reason === "refusal" ? null : response.parsed_output;
-    if (!out) return { ...parseWithRules(text, catalog), usage: { ...usage, used: usage.used + 1 } };
+    if (!out) return { ...rules, usage: { ...usage, used: usage.used + 1 } };
     const byId = new Map(catalog.map((e) => [e.variantId, e]));
     const district = out.district ? DISTRICTS.find(([e]) => e.toLowerCase() === out.district!.toLowerCase())?.[0] : undefined;
     return {
@@ -181,6 +189,6 @@ export async function parseOrder(tx: Tx, businessId: string, text: string): Prom
   } catch (e) {
     if (e instanceof Anthropic.APIError) console.warn("AI parse failed, using rules:", e.status, e.message);
     else console.warn("AI parse failed, using rules:", (e as Error).message);
-    return { ...parseWithRules(text, catalog), usage };
+    return { ...rules, usage };
   }
 }
