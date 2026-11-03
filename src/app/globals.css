@@ -1,26 +1,310 @@
 @import "tailwindcss";
 
+/*
+  BechaKena design tokens.
+  Neutrals are fixed; everything prefixed --brand-* is generated at runtime from
+  the business's chosen accent (see src/lib/theme.ts) and written onto <html>.
+  The values below are the default "Jamdani" ramp so the server render is correct.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --canvas: #f3f4f0;
+  --surface: #ffffff;
+  --surface-2: #f8f9f6;
+  --sunken: #eceee8;
+  --line: #e2e4de;
+  --line-strong: #cdd1c8;
+  --ink: #16181a;
+  --ink-2: #464b50;
+  --ink-3: #686e74;
+  --ink-4: #9aa0a5;
+
+  --brand: #0e6b53;
+  --brand-contrast: #ffffff;
+  --brand-ink: #0b5a45;
+  --brand-50: #eef8f3;
+  --brand-100: #d9f0e6;
+  --brand-200: #b3e0cd;
+  --brand-300: #7fc8ab;
+  --brand-400: #45a684;
+  --brand-500: #1d8a68;
+  --brand-600: #0e6b53;
+  --brand-700: #0b5a45;
+  --brand-800: #0a4738;
+  --brand-900: #08382c;
+  --brand-950: #05241c;
+
+  /* Cash / COD is always marigold, independent of brand. */
+  --cash: #f0a92b;
+  --cash-soft: #fdf1d9;
+  --cash-ink: #7a4d00;
+
+  --r: 12px;
+  --row: 44px;
+  --gap: 20px;
+
+  --shadow-1: 0 1px 0 rgb(22 24 26 / 0.03), 0 1px 2px rgb(22 24 26 / 0.06);
+  --shadow-2: 0 1px 2px rgb(22 24 26 / 0.05), 0 4px 12px -2px rgb(22 24 26 / 0.07);
+  --shadow-3: 0 2px 4px rgb(22 24 26 / 0.04), 0 16px 40px -8px rgb(22 24 26 / 0.16);
+  --ring: 0 0 0 3px color-mix(in oklab, var(--brand) 28%, transparent);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+:root[data-canvas="mist"] {
+  --canvas: #eff2f5;
+  --surface-2: #f6f8fa;
+  --sunken: #e6eaee;
+  --line: #dde2e7;
+  --line-strong: #c8cfd6;
+}
+:root[data-canvas="sand"] {
+  --canvas: #f5f3ef;
+  --surface-2: #faf9f6;
+  --sunken: #ece9e3;
+  --line: #e5e1d9;
+  --line-strong: #d3cdc2;
+}
+:root[data-canvas="tint"] {
+  --canvas: color-mix(in oklab, var(--brand-50) 70%, #f3f4f0);
+  --surface-2: color-mix(in oklab, var(--brand-50) 35%, #ffffff);
+  --sunken: color-mix(in oklab, var(--brand-100) 45%, #eceee8);
+  --line: color-mix(in oklab, var(--brand-200) 30%, #e2e4de);
+  --line-strong: color-mix(in oklab, var(--brand-300) 30%, #cdd1c8);
+}
+:root[data-canvas="white"] {
+  --canvas: #fbfbfa;
+  --surface-2: #f7f7f5;
+  --sunken: #f0f0ed;
+}
+
+:root[data-density="compact"] {
+  --row: 36px;
+  --gap: 14px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+
+  --color-brand: var(--brand);
+  --color-brand-contrast: var(--brand-contrast);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+
+  --color-cash: var(--cash);
+  --color-cash-soft: var(--cash-soft);
+  --color-cash-ink: var(--cash-ink);
+
+  /* Order lifecycle colours (fixed, so status reads the same in every theme). */
+  --color-st-draft: #7c8288;
+  --color-st-confirmed: #4a5bd4;
+  --color-st-packed: #8b52c9;
+  --color-st-shipped: #1a84bd;
+  --color-st-delivered: #18915a;
+  --color-st-returned: #d0435a;
+  --color-st-cancelled: #9aa0a5;
+
+  --color-bkash: #d81b72;
+  --color-nagad: #ec6a1c;
+  --color-danger: #c8342f;
+  --color-danger-soft: #fdecea;
+  --color-warn: #b86e00;
+  --color-warn-soft: #fff4dc;
+  --color-ok: #18915a;
+  --color-ok-soft: #e5f5ec;
+
+  --radius-xs: calc(var(--r) * 0.4);
+  --radius-sm: calc(var(--r) * 0.6);
+  --radius-md: var(--r);
+  --radius-lg: calc(var(--r) * 1.4);
+  --radius-xl: calc(var(--r) * 1.9);
+
+  --shadow-1: var(--shadow-1);
+  --shadow-2: var(--shadow-2);
+  --shadow-3: var(--shadow-3);
+
+  --font-sans: var(--font-geist), var(--font-noto-bn), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-active, var(--font-anek)), var(--font-noto-bn), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --ease-out: var(--ease-out);
+  --ease-spring: var(--ease-spring);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root[data-display="anek"] { --font-display-active: var(--font-anek); }
+:root[data-display="hind"] { --font-display-active: var(--font-hind); }
+:root[data-display="baloo"] { --font-display-active: var(--font-baloo); }
+:root[data-display="geist"] { --font-display-active: var(--font-geist); }
+
+/* Bangla UI: Bengali glyphs need more vertical room than Latin. */
+:root[lang="bn"] body {
+  line-height: 1.6;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
 }
+
+::selection {
+  background: color-mix(in oklab, var(--brand) 22%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Condensed display figures for money — the Anek width axis. */
+.figure {
+  font-family: var(--font-display);
+  font-variation-settings: "wdth" 88;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Thermal-receipt torn edge used by invoice previews. */
+.receipt-edge {
+  --tooth: 10px;
+  mask:
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--tooth) 100%;
+  -webkit-mask:
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--tooth) 100%;
+}
+
+/* Edit-mode wobble for dashboard widgets. */
+@keyframes jiggle {
+  0%, 100% { transform: rotate(-0.25deg); }
+  50% { transform: rotate(0.25deg); }
+}
+
+@keyframes flow {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--sunken) 25%, var(--surface-2) 50%, var(--sunken) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Overlay motion (CSS only, so the shell needs no animation library).
+   Elements carry data-state="open|closed"; the closed animation plays
+   before unmount (see usePresence in components/ui/overlays.tsx).
+------------------------------------------------------------------- */
+@keyframes bk-fade-in { from { opacity: 0; } }
+@keyframes bk-fade-out { to { opacity: 0; } }
+@keyframes bk-slide-in-right { from { opacity: 0; transform: translateX(40px); } }
+@keyframes bk-slide-out-right { to { opacity: 0; transform: translateX(40px); } }
+@keyframes bk-slide-in-up { from { transform: translateY(100%); } }
+@keyframes bk-slide-out-down { to { transform: translateY(100%); } }
+@keyframes bk-pop-in { from { opacity: 0; transform: translateY(8px) scale(0.96); } }
+@keyframes bk-pop-out { to { opacity: 0; transform: translateY(4px) scale(0.97); } }
+@keyframes bk-drop-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+@keyframes bk-toast-in { from { opacity: 0; transform: translateY(16px) scale(0.97); } }
+
+.bk-scrim[data-state="open"] { animation: bk-fade-in 180ms var(--ease-out) both; }
+.bk-scrim[data-state="closed"] { animation: bk-fade-out 160ms ease-in both; }
+.bk-sheet[data-state="open"] { animation: bk-slide-in-right 300ms var(--ease-out) both; }
+.bk-sheet[data-state="closed"] { animation: bk-slide-out-right 180ms ease-in both; }
+@media (max-width: 767px) {
+  .bk-sheet[data-state="open"] { animation: bk-slide-in-up 320ms var(--ease-out) both; }
+  .bk-sheet[data-state="closed"] { animation: bk-slide-out-down 200ms ease-in both; }
+}
+.bk-pop[data-state="open"] { animation: bk-pop-in 260ms var(--ease-spring) both; }
+.bk-pop[data-state="closed"] { animation: bk-pop-out 150ms ease-in both; }
+.bk-drop[data-state="open"] { animation: bk-drop-in 140ms var(--ease-out) both; transform-origin: top; }
+.bk-drop[data-state="closed"] { animation: bk-fade-out 100ms ease-in both; }
+.bk-toast { animation: bk-toast-in 280ms var(--ease-spring) both; }
+.bk-swap { animation: bk-fade-in 200ms var(--ease-out) both; }
+
+@keyframes bk-msg {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+@keyframes bk-typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+@keyframes bk-scan {
+  0%, 100% { top: 18%; }
+  50% { top: 78%; }
+}
+@keyframes bk-soft-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+}
+@keyframes bk-slot-in {
+  from { transform: translateY(105%); }
+}
+@keyframes bk-slot-out {
+  to { transform: translateY(-105%); }
+}
+@keyframes bk-marquee { to { transform: translateX(-50%); } }

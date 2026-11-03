@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BechaKena — web prototype
 
-## Getting Started
+A working, clickable prototype of BechaKena POS: stock, sales and invoicing for online and social sellers in Bangladesh. It implements the MVP flows from [../pos-srs.md](../pos-srs.md) against on-device demo data, so it can go straight into seller usability tests (business plan §12, step 4).
 
-First, run the development server:
+## Run it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local      # then fill in what you need
+npm run db:up                    # Postgres 17 in Docker on port 55433
+npm run db:migrate
+npm run dev                      # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Sign in** with any Bangladeshi mobile number. With `SMS_DRIVER=console` the code is printed in the server log and shown on screen (development only).
+- **Explore without an account:** the demo shop runs entirely on the device.
+- **Tests:** `npm run test` (unit) · `npm run test:server` (against a throwaway Postgres database) · `npm run test:all`.
+- **Production:** `npm run build && npm start`, or build the `Dockerfile`. Health check: `/api/health`. Schedule `/api/cron/courier-sync` (every 15–30 min), `/api/cron/daily` (hourly) and `POST /api/billing/cron` (daily) with `Authorization: Bearer $CRON_SECRET`.
+- **Super-admin:** `npm run admin:grant -- 017XXXXXXXX`, then open `/admin`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## What's in it
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Screen | Route | Highlights |
+|---|---|---|
+| Home | `/dashboard` | Drag-to-arrange widgets in four sizes, a widget library, role layouts (Owner, Packing desk, Sales floor), parcel journey, real-profit receipt, Bangla calendar date |
+| New order | `/pos` | Product finder + scan, Messenger quick-paste, phone lookup with return-risk, delivery presets, split payments, COD/due, parked carts, F2/F4/F8/F9 |
+| Orders | `/orders` | Journey strip, list and drag-to-advance board, bulk print/ship, detail sheet with timeline, returns that restock |
+| Customers | `/customers` | Segments, return-risk ring, dues, profile, WhatsApp/call |
+| Products | `/products` | Lookbook grid / table, variant matrix editor, CSV import with validation, share cards |
+| Stock | `/inventory` | Stock in with weighted average cost, adjustments, ledger, suppliers |
+| Cash & COD | `/money` | Money map, COD by courier, dues with reminders, supplier dues, expenses |
+| Reports | `/reports` | Sales, profit waterfall, stock, returns, staff; CSV and print |
+| Settings | `/settings` | **Brand studio** (logo → suggested colours, theme presets, background, sidebar, corners, density, typeface), invoices, delivery zones, team & roles, language, plan, backup |
+| Invoice / label | `/invoice/[id]` | 58/80 mm POS rolls, A5, A4, Letter, two copies on one A4, Mushak-6.3; labels at 100×75, 4×6 in, 75×50 or 8 per A4 sheet; optional shop copy; each device remembers its own paper; comma-separated ids print in bulk |
 
-## Learn More
+Switch staff from the menu at the bottom of the sidebar to see role permissions (for example, Sales can't see cost or profit). Press `⌘K` anywhere to search, and `N` to start a new order.
 
-To learn more about Next.js, take a look at the following resources:
+## How it's built
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Next.js 16** (App Router, Cache Components) + **Tailwind v4**. See [design-dna.md](design-dna.md) for the visual contract.
+- **Local-first state**: one persisted Zustand store (`src/lib/store.ts`) holds everything and is the seam for a real API later. Because screens read device storage, the `(app)` layout waits for hydration (`instant = false`).
+- **Domain logic** is pure and tested (`src/lib/domain.ts`, `src/lib/analytics.ts`): the order state machine and its stock effects follow SRS §3.5 exactly (reserve → in transit → delivered / restocked).
+- **Theming**: one accent hex becomes a full OKLCH ramp with AA-checked text colours (`src/lib/theme.ts`), applied before first paint by an inline script.
+- **Bilingual UI**: strings sit inline as `t("English", "বাংলা")`; numbers go through `useFmt()` for lakh grouping and optional Bangla numerals.
+- **Offline**: `public/sw.js` caches the app shell, and data never leaves the device.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+  app/(app)/…        screens inside the shell
+  app/invoice/[id]   print documents (no shell)
+  components/ui      buttons, inputs, sheets, dialogs, menus, toasts
+  components/…       one folder per feature
+  lib/               types, domain rules, store, seed, analytics, theme, formatting
+```
 
-## Deploy on Vercel
+## Needs live credentials before launch
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Courier (Steadfast, Pathao, RedX, Paperfly, Carrybee), bKash/Nagad/SSLCommerz, SMS gateway, Meta (inbox) and Anthropic (AI order reading) adapters are written against each provider's API and run on sandbox drivers until keys are added in `.env.local` or per shop in Settings. Endpoints marked TODO in `src/server/integrations/**` should be confirmed against each provider's merchant docs.

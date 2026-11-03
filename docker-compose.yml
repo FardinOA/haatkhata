@@ -1,0 +1,18 @@
+# Local Postgres for development and integration tests.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: bechakena
+      POSTGRES_PASSWORD: bechakena
+      POSTGRES_DB: bechakena
+    ports:
+      - "55433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bechakena"]
+      interval: 2s
+      retries: 20
+volumes:
+  pgdata:
