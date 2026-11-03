@@ -29,7 +29,7 @@ import { ShareCardSheet } from "./share-card";
 import { CameraScanner, primeScanFeedback } from "../scan/camera-scanner";
 import { usePhoneScanTarget } from "../scan/phone-scanner-provider";
 import { colourValues, downloadText, margin, priceRange, productStock, swatchFor, toCSV, avgCost } from "./utils";
-import { findByCode } from "@/lib/barcode";
+import { fillMissingBarcodes, findByCode } from "@/lib/barcode";
 import { useCan, useDebounced, useFmt, useT } from "@/lib/hooks";
 import { useStore } from "@/lib/store";
 import type { Product } from "@/lib/types";
@@ -380,6 +380,18 @@ export function Catalog() {
           <Button size="sm" icon={<DownloadSimple className="size-4" />} onClick={() => exportCsv(selectedProducts)}>
             CSV
           </Button>
+          {selectedProducts.some((p) => p.variants.some((v) => !v.barcode?.trim())) && (
+            <Button
+              size="sm"
+              onClick={() => {
+                const { changed, filled } = fillMissingBarcodes(products, selected);
+                changed.forEach((p) => saveProduct(p));
+                toast({ title: t(`${filled} variants got a barcode`, `${f.num(filled)}টি ভ্যারিয়েন্টে বারকোড দেওয়া হয়েছে`), body: t("Each is a scannable EAN-13, unique in your shop.", "প্রতিটি স্ক্যানযোগ্য EAN-13, আপনার দোকানে অনন্য।") });
+              }}
+            >
+              {t("Fill barcodes", "বারকোড দিন")}
+            </Button>
+          )}
           <Link
             href={labelsHref(selectedProducts)}
             className="inline-flex h-8 items-center gap-1.5 rounded-sm border border-line-strong/80 bg-surface px-3 text-[13px] font-medium text-ink shadow-1 hover:bg-surface-2"

@@ -10,6 +10,7 @@ import { VariantPicker } from "@/components/inventory/variant-picker";
 import { Barcode } from "@/components/products/barcode";
 import { Button, cn, EmptyState, IconButton, Segmented, Stepper, Switch } from "@/components/ui/core";
 import { useFmt, useT } from "@/lib/hooks";
+import { fillMissingBarcodes } from "@/lib/barcode";
 import { getVariant, useStore } from "@/lib/store";
 
 /** Barcode label sheets (FR-PRD-04): A4 3×8 sheets or 38×25 mm label-printer rolls. */
@@ -26,6 +27,7 @@ function Labels() {
   const params = useSearchParams();
   const products = useStore((s) => s.products);
   const business = useStore((s) => s.business);
+  const saveProduct = useStore((s) => s.saveProduct);
   const [lines, setLines] = useState<{ variantId: string; qty: number }[]>(() =>
     (params.get("v") ?? "")
       .split(",")
@@ -52,6 +54,7 @@ function Labels() {
   const perPage = sheet === "a4" ? A4.cols * A4.rows : 1;
   const pages = Array.from({ length: Math.ceil(labels.length / perPage) }, (_, i) => labels.slice(i * perPage, (i + 1) * perPage));
   const exclude = useMemo(() => new Set(lines.map((l) => l.variantId)), [lines]);
+  const noCode = lines.map((l) => getVariant(products, l.variantId)).filter((h) => h && !h.v.barcode?.trim());
 
   const label = (hit: (typeof labels)[number], i: number) => (
     <div
@@ -127,6 +130,18 @@ function Labels() {
               {t("Show shop name", "দোকানের নাম")}
               <Switch size="sm" checked={showShop} onChange={setShowShop} label={t("Show shop name", "দোকানের নাম")} />
             </label>
+            {noCode.length > 0 && (
+              <div className="rounded-md border border-warn/25 bg-warn-soft px-3 py-2.5 text-xs text-warn">
+                <p>{t(`${noCode.length} of these have no barcode yet.`, `${f.num(noCode.length)}টির এখনো বারকোড নেই।`)}</p>
+                <button
+                  type="button"
+                  className="mt-1 font-semibold underline underline-offset-2"
+                  onClick={() => fillMissingBarcodes(products, new Set(noCode.map((h) => h!.p.id))).changed.forEach((p) => saveProduct(p))}
+                >
+                  {t("Give them barcodes", "বারকোড দিন")}
+                </button>
+              </div>
+            )}
             <p className="text-xs text-ink-3">{t("Products without a barcode print their SKU as Code 128 — any scanner reads it, and so does the order screen.", "বারকোড না থাকলে SKU কোড-১২৮ হিসেবে প্রিন্ট হয় — যেকোনো স্ক্যানার ও অর্ডার স্ক্রিন পড়তে পারে।")}</p>
             {gate.note && <p className="text-xs font-medium text-cash-ink">{gate.note}</p>}
           </div>

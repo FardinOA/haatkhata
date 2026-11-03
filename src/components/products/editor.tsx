@@ -26,7 +26,7 @@ import { ProductRail } from "./product-rail";
 import { ShareCardSheet } from "./share-card";
 import { compressImage, margin, nextSku, skuPrefixFrom, swatchFor } from "./utils";
 import { labelsHref } from "./catalog";
-import { inStoreEan13 } from "@/lib/barcode";
+import { barcodeOwner, codeKeys, inStoreEan13 } from "@/lib/barcode";
 import { useCan, useFmt, useT } from "@/lib/hooks";
 import { uid } from "@/lib/base-data";
 import { useStore } from "@/lib/store";
@@ -64,7 +64,7 @@ type Draft = {
   bundle: BundleComponent[];
 };
 
-type Errors = Partial<Record<"name" | "price" | "options" | "variants", string>> & { sku?: Record<string, string>; vprice?: Record<string, string> };
+type Errors = Partial<Record<"name" | "price" | "options" | "variants", string>> & { sku?: Record<string, string>; barcode?: Record<string, string>; vprice?: Record<string, string> };
 
 const comboKey = (o: Record<string, string>) => JSON.stringify(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)));
 
@@ -279,17 +279,27 @@ export function ProductEditor({ productId }: { productId?: string }) {
     if (draft.combo && !draft.bundle.length) e.variants = t("Add the items that make up this combo.", "কম্বোর ভেতরের পণ্যগুলো যোগ করুন।");
     if (draft.combo && draft.optionTypes.length) e.options = t("A combo sells as one item — remove sizes and colours.", "কম্বো একটি পণ্য — সাইজ ও রং সরান।");
     const sku: Record<string, string> = {};
+    const barcode: Record<string, string> = {};
     const vprice: Record<string, string> = {};
     const seen = new Set<string>();
+    const seenCodes = new Set<string>();
     for (const v of draft.variants) {
       const s = v.sku.trim().toUpperCase();
       if (!s) sku[v.id] = t("SKU is required", "SKU লাগবে");
       else if (otherSkus.has(s)) sku[v.id] = t("Used by another product", "অন্য পণ্যে আছে");
       else if (seen.has(s)) sku[v.id] = t("Duplicate SKU", "একই SKU");
       seen.add(s);
+      // One barcode, one product — otherwise a scan can't tell them apart.
+      const code = v.barcode?.trim() ?? "";
+      const keys = codeKeys(code);
+      const owner = code ? barcodeOwner(products, code, productId) : null;
+      if (owner) barcode[v.id] = t(`Already on ${owner.name}`, `${owner.nameBn || owner.name} এ আছে`);
+      else if (keys.some((k) => seenCodes.has(k))) barcode[v.id] = t("Same barcode as another variant", "অন্য ভ্যারিয়েন্টে একই বারকোড");
+      keys.forEach((k) => seenCodes.add(k));
       if (v.active && !(v.price > 0)) vprice[v.id] = t("Set a price", "দাম দিন");
     }
     if (Object.keys(sku).length) e.sku = sku;
+    if (Object.keys(barcode).length) e.barcode = barcode;
     if (Object.keys(vprice).length) {
       e.vprice = vprice;
       if (!(draft.price > 0)) e.price = t("Set a selling price above ৳0.", "৳০ এর বেশি দাম দিন।");
@@ -925,6 +935,7 @@ function VariantMatrix({
           {draft.variants.map((v) => {
             const label = Object.entries(v.options);
             const skuErr = errors.sku?.[v.id];
+            const codeErr = errors.barcode?.[v.id];
             const priceErr = errors.vprice?.[v.id];
             const orphan = !v.active && Object.keys(v.options).some((k) => !draft.optionTypes.some((o) => o.name === k && o.values.includes(v.options[k])));
             return (
@@ -955,7 +966,8 @@ function VariantMatrix({
                   </div>
                   <div>
                     <MobileLabel>{t("Barcode", "বারকোড")}</MobileLabel>
-                    <Input inputSize="sm" value={v.barcode ?? ""} onChange={(e) => update(v.id, { barcode: e.target.value })} placeholder={t("Barcode", "বারকোড")} aria-label={t("Barcode", "বারকোড")} className="font-mono text-[12px] text-ink-2" />
+                    <Input inputSize="sm" value={v.barcode ?? ""} onChange={(e) => update(v.id, { barcode: e.target.value })} placeholder={t("Barcode", "বারকোড")} aria-label={t("Barcode", "বারকোড")} aria-invalid={!!codeErr} className="font-mono text-[12px] text-ink-2" />
+                    {codeErr && <p className="mt-1 text-[11.5px] text-danger">{codeErr}</p>}
                   </div>
                 </div>
                 <div>

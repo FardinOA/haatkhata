@@ -7,7 +7,7 @@ import { Sheet } from "@/components/ui/overlays";
 import { makeT, useT } from "@/lib/hooks";
 
 /** What the screen did with a scanned code — shown in the scanner's log. */
-export type ScanOutcome = { ok: boolean; title: string; detail?: string };
+export type ScanOutcome = { ok: boolean; title: string; detail?: string; quiet?: boolean };
 export type ScanLogEntry = ScanOutcome & { id: number };
 /** Answers a scan right away (this device) or later (a paired computer). */
 export type ScanHandler = (code: string) => ScanOutcome | null | Promise<ScanOutcome | null>;
@@ -122,12 +122,20 @@ export function Viewfinder({ onCode, onResult, lang, className }: { onCode: Scan
   const [torch, setTorch] = useState<boolean | null>(null);
   const [flash, setFlash] = useState<{ ok: boolean; at: number } | null>(null);
 
+  // One scan at a time: while a scan waits (for the counter, or a "scanned twice?" answer) the camera holds off.
+  const busy = useRef(false);
   const handle = useEffectEvent(async (code: string) => {
-    const r = await onCode(code);
-    if (!r) return;
-    feedback(r.ok);
-    onResult(r);
-    setFlash({ ok: r.ok, at: Date.now() });
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      const r = await onCode(code);
+      if (!r) return;
+      feedback(r.ok);
+      onResult(r);
+      setFlash({ ok: r.ok, at: Date.now() });
+    } finally {
+      busy.current = false;
+    }
   });
 
   useEffect(() => {

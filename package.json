@@ -17,6 +17,7 @@
     "db:migrate": "tsx --env-file=.env.local src/server/db/migrate.ts",
     "test:server": "vitest run --project server",
     "test:all": "vitest run",
+    "test:e2e": "playwright test",
     "admin:grant": "tsx --env-file=.env.local scripts/admin-grant.ts"
   },
   "dependencies": {
@@ -45,6 +46,7 @@
     "zustand": "^5.0.16"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { barcodeFor, bitsToWidths, code128, code128Values, CODE128_PATTERNS, ean13Bits, eanCheckDigit, findByCode, inStoreEan13, isValidEan13 } from "./barcode";
+import { barcodeFor, bitsToWidths, code128, code128Values, CODE128_PATTERNS, ean13Bits, eanCheckDigit, barcodeOwner, fillMissingBarcodes, findByCode, inStoreEan13, isValidEan13 } from "./barcode";
 
 /** Reads Code 128 widths back into text — proves the encoder is reversible. */
 function decode128(widths: number[]): string {
@@ -89,5 +89,31 @@ describe("EAN-13", () => {
     expect(findByCode(products, " jmd-101 ")?.p.id).toBe("a");
     expect(findByCode(products, "012345678905")?.p.id).toBe("a");
     expect(findByCode(products, "999")).toBeNull();
+  });
+
+  it("names the other product that already uses a barcode", () => {
+    const products = [
+      { id: "a", name: "Kurti", variants: [{ barcode: "0012345678905" }, {}] },
+      { id: "b", name: "Hijab", variants: [{ barcode: "2000000000015" }] },
+    ];
+    expect(barcodeOwner(products, "2000000000015")?.name).toBe("Hijab");
+    expect(barcodeOwner(products, " 2000000000015 ", "b")).toBeNull(); // its own code is fine
+    expect(barcodeOwner(products, "012345678905")?.name).toBe("Kurti"); // UPC-A form of the same code
+    expect(barcodeOwner(products, "")).toBeNull();
+  });
+
+  it("fills only missing barcodes, only in the chosen products, all unique", () => {
+    const all = [
+      { id: "a", variants: [{ barcode: "2000000000015" }, { barcode: "" }, {}] },
+      { id: "b", variants: [{}] },
+      { id: "c", variants: [{ barcode: "4006381333931" }] },
+    ];
+    const { changed, filled } = fillMissingBarcodes(all, new Set(["a", "c"]));
+    expect(filled).toBe(2);
+    expect(changed.map((p) => p.id)).toEqual(["a"]); // c had nothing missing, b wasn't chosen
+    const codes = changed[0].variants.map((v) => v.barcode!);
+    expect(codes[0]).toBe("2000000000015");
+    expect(codes.slice(1).every(isValidEan13)).toBe(true);
+    expect(new Set(codes).size).toBe(3);
   });
 });

@@ -61,7 +61,7 @@ export function PhoneScannerProvider({ children }: { children: ReactNode }) {
     const target = targets.current.at(-1);
     if (target) {
       const r = target.current(code);
-      toast({ title: r.title, body: r.detail, tone: r.ok ? "ok" : "warn" });
+      if (!r.quiet) toast({ title: r.title, body: r.detail, tone: r.ok ? "ok" : "warn" });
       return r;
     }
     const field = focusedField();

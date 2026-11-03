@@ -150,12 +150,53 @@ export function inStoreEan13(taken: Set<string>): string {
  * UPC-A scans (12 digits) also match the same code stored as EAN-13 ("0…").
  */
 export function findByCode<P extends { variants: { sku: string; barcode?: string }[] }>(products: P[], raw: string): { p: P; v: P["variants"][number] } | null {
-  const code = raw.trim().toLowerCase();
-  if (!code) return null;
-  const alts = /^\d{12}$/.test(code) ? [code, `0${code}`] : [code];
+  const alts = codeKeys(raw);
+  if (!alts.length) return null;
   for (const p of products) {
     const v = p.variants.find((x) => alts.includes(x.barcode?.trim().toLowerCase() ?? "") || alts.includes(x.sku.toLowerCase()));
     if (v) return { p, v };
   }
   return null;
+}
+
+/** Spellings a scanner may report for one code: UPC-A (12 digits) and its EAN-13 form ("0…") are the same barcode. */
+export function codeKeys(raw: string): string[] {
+  const code = raw.trim().toLowerCase();
+  if (!code) return [];
+  if (/^\d{12}$/.test(code)) return [code, `0${code}`];
+  if (/^0\d{12}$/.test(code)) return [code, code.slice(1)];
+  return [code];
+}
+
+/**
+ * The other product already wearing this barcode, if any. Two products on one
+ * code would make every scan of it pick the first, so saving must refuse it.
+ */
+export function barcodeOwner<P extends { id: string; variants: { barcode?: string }[] }>(products: P[], code: string, exceptProductId?: string): P | null {
+  const keys = codeKeys(code);
+  if (!keys.length) return null;
+  return products.find((p) => p.id !== exceptProductId && p.variants.some((v) => codeKeys(v.barcode ?? "").some((k) => keys.includes(k)))) ?? null;
+}
+
+/**
+ * Gives every variant without a barcode (in the chosen products) its own fresh
+ * in-store EAN-13, unique across the whole catalogue. Returns only the
+ * products that changed, and how many variants got a code.
+ */
+export function fillMissingBarcodes<P extends { id: string; variants: V[] }, V extends { barcode?: string }>(all: P[], ids: Set<string>): { changed: P[]; filled: number } {
+  const taken = new Set(all.flatMap((p) => p.variants.flatMap((v) => codeKeys(v.barcode ?? ""))));
+  let filled = 0;
+  const changed: P[] = [];
+  for (const p of all) {
+    if (!ids.has(p.id) || p.variants.every((v) => v.barcode?.trim())) continue;
+    const variants = p.variants.map((v) => {
+      if (v.barcode?.trim()) return v;
+      const barcode = inStoreEan13(taken);
+      taken.add(barcode);
+      filled++;
+      return { ...v, barcode };
+    });
+    changed.push({ ...p, variants });
+  }
+  return { changed, filled };
 }

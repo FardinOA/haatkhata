@@ -9,6 +9,7 @@ import { useFmt, useT } from "@/lib/hooks";
 import { uid } from "@/lib/base-data";
 import { useStore } from "@/lib/store";
 import type { PatternId, Product, Variant } from "@/lib/types";
+import { codeKeys } from "@/lib/barcode";
 
 const COLUMNS = ["name", "name_bn", "category", "unit", "price", "cost", "mrp", "option1_name", "option1_value", "option2_name", "option2_value", "sku", "barcode", "opening_stock", "low_stock"] as const;
 
@@ -69,6 +70,8 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
       return i >= 0 ? (r[i] ?? "").trim() : "";
     };
     const takenSkus = new Set(products.flatMap((p) => p.variants.map((v) => v.sku.toLowerCase())));
+    // Barcodes on file (in every form a scanner may report) — two products on one code would make scans ambiguous.
+    const takenCodes = new Set(products.flatMap((p) => p.variants.flatMap((v) => codeKeys(v.barcode ?? ""))));
     const existingNames = new Set(products.map((p) => p.name.trim().toLowerCase()));
     const seenCombos = new Set<string>();
     const num = (s: string) => (s === "" ? NaN : Number(s.replace(/[,৳\s]/g, "")));
@@ -104,6 +107,10 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
         if (takenSkus.has(sku.toLowerCase())) errors.push(t(`SKU ${sku} is already used`, `SKU ${sku} আগেই আছে`));
         else takenSkus.add(sku.toLowerCase());
       }
+      const code = col(r, "barcode");
+      const codeK = codeKeys(code);
+      if (codeK.some((k) => takenCodes.has(k))) errors.push(t(`Barcode ${code} is already used`, `বারকোড ${code} আগেই আছে`));
+      else codeK.forEach((k) => takenCodes.add(k));
       if (name && existingNames.has(name.toLowerCase())) errors.push(t("A product with this name already exists", "এই নামে পণ্য আগেই আছে"));
       const combo = `${name.toLowerCase()}|${JSON.stringify(options)}`;
       if (name && seenCombos.has(combo)) errors.push(t("Duplicate of an earlier row", "আগের সারির মতো একই"));

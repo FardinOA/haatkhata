@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, DeviceMobile, MagnifyingGlass, X } from "@phosphor-icons/react";
-import { forwardRef, useMemo, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { ProductThumb } from "@/components/bits";
 import { CameraScanner, primeScanFeedback, type ScanOutcome } from "@/components/scan/camera-scanner";
 import { usePhoneScanner, usePhoneScanTarget } from "@/components/scan/phone-scanner-provider";
@@ -9,10 +9,12 @@ import { cn, Kbd } from "@/components/ui/core";
 import { useToast } from "@/components/ui/overlays";
 import { findByCode } from "@/lib/barcode";
 import { available } from "@/lib/domain";
+import { afterScan, isRepeatScan, type LastScan } from "@/lib/repeat-scan";
 import { useFmt, useMediaQuery, useT } from "@/lib/hooks";
 import { useStore } from "@/lib/store";
 import type { Product } from "@/lib/types";
 import { usePos } from "./use-pos";
+import { useQuantityPrompt } from "./quantity-prompt";
 import { VariantPicker } from "./variant-picker";
 
 const norm = (s: string) =>
@@ -64,7 +66,12 @@ export const ProductFinder = forwardRef<HTMLInputElement, { className?: string }
   const t = useT();
   const f = useFmt();
   const toast = useToast();
-  const { addVariant, draft } = usePos();
+  const { addVariant, updateLine, draft } = usePos();
+  // Answers to a quantity question arrive later; they read the cart as it is then.
+  const latest = useRef(draft);
+  useEffect(() => {
+    latest.current = draft;
+  });
   const products = useStore((s) => s.products);
   const categories = useStore((s) => s.categories);
   const orders = useStore((s) => s.orders);
@@ -73,6 +80,9 @@ export const ProductFinder = forwardRef<HTMLInputElement, { className?: string }
   const [cat, setCat] = useState<string>("all");
   const [picker, setPicker] = useState<Product | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [askQuantity, quantityNode] = useQuantityPrompt();
+  const lastScan = useRef<LastScan>(null);
+  const asking = useRef(false);
   // A computer (mouse/trackpad) pairs a phone; a phone or tablet uses its own camera. Width alone
   // misjudges a narrow desktop window as a phone.
   const desktop = !useMediaQuery("(pointer: coarse)");
@@ -118,13 +128,60 @@ export const ProductFinder = forwardRef<HTMLInputElement, { className?: string }
     setPicker(p);
   };
 
-  /** Keyboard-wedge scanners type the code and press Enter. */
-  const onEnter = () => {
+  type Hit = NonNullable<ReturnType<typeof findByCode<Product>>>;
+  const nameOf = (hit: Hit) => t(hit.p.name, hit.p.nameBn ?? hit.p.name);
+  const inCartQty = (variantId: string) => draft.lines.filter((l) => l.variantId === variantId).reduce((n, l) => n + l.qty, 0);
+  const notFound = (code: string): ScanOutcome => ({ ok: false, title: t("Not one of your products", "আপনার কোনো পণ্যের সাথে মেলেনি"), detail: code });
+
+  /** Every scan, whatever scanned it: into the cart, but never past the stock on the shelf. */
+  const addScanned = (hit: Hit, have = inCartQty(hit.v.id)): ScanOutcome => {
+    const name = nameOf(hit);
+    const opts = Object.values(hit.v.options).join(" / ");
+    if (!allowNegative && available(hit.v) - have <= 0) {
+      return { ok: false, title: t(`${name} — out of stock`, `${name} — স্টকে নেই`), detail: have ? t(`All ${have} in stock are already in the cart`, `স্টকের ${f.num(have)}টিই কার্টে আছে`) : opts || undefined };
+    }
+    addVariant(hit.v.id);
+    lastScan.current = afterScan(hit.v.id, Date.now());
+    return { ok: true, title: name, detail: [opts, f.money(hit.v.price), t(`${have + 1} in cart`, `কার্টে ${f.num(have + 1)}টি`)].filter(Boolean).join(" · ") };
+  };
+
+  /** "Scanned again — how many?" Resolves null without asking if a question is already open. */
+  const askQty = async (hit: Hit) => {
+    if (asking.current) return null;
+    asking.current = true;
+    const have = inCartQty(hit.v.id);
+    const n = await askQuantity({ title: t(`${nameOf(hit)} scanned again`, `${nameOf(hit)} আবার স্ক্যান হয়েছে`), have, max: allowNegative ? Infinity : Math.max(have, available(hit.v)) });
+    asking.current = false;
+    return n;
+  };
+
+  /** Sets the cart to the chosen quantity (the cart may have moved on while the question was open). */
+  const applyQty = (hit: Hit, n: number): ScanOutcome => {
+    const line = latest.current.lines.find((l) => l.variantId === hit.v.id);
+    const have = line?.qty ?? 0;
+    if (!line) addVariant(hit.v.id, n);
+    else if (n !== have) updateLine(line.key, { qty: n });
+    lastScan.current = afterScan(hit.v.id, Date.now());
+    return n === have
+      ? { ok: true, title: t(`${nameOf(hit)} — kept at ${have}`, `${nameOf(hit)} — ${f.num(have)}টিই থাকল`) }
+      : { ok: true, title: nameOf(hit), detail: t(`${n} in cart`, `কার্টে ${f.num(n)}টি`) };
+  };
+  const isRepeat = (hit: Hit) => isRepeatScan(lastScan.current, hit.v.id, Date.now());
+  const busyAsking = (hit: Hit): ScanOutcome => ({ ok: false, title: t("Answer the open question first", "আগে খোলা প্রশ্নের উত্তর দিন"), detail: nameOf(hit) });
+
+  /** Keyboard-wedge (USB) scanners type the code and press Enter; a repeat asks here on the computer. */
+  const onEnter = async () => {
     const hit = findByCode(active, q);
     if (hit) {
-      addVariant(hit.v.id);
-      toast({ title: t("Added to cart", "কার্টে যোগ হয়েছে"), body: `${hit.p.name}${Object.keys(hit.v.options).length ? ` · ${Object.values(hit.v.options).join(" / ")}` : ""}` });
       setQ("");
+      if (!hit.v.active) return toast({ ...notFound(q), tone: "warn" });
+      let r: ScanOutcome;
+      if (isRepeat(hit)) {
+        const n = await askQty(hit);
+        if (n === null) return;
+        r = applyQty(hit, n);
+      } else r = addScanned(hit);
+      toast({ title: r.ok ? t("Added to cart", "কার্টে যোগ হয়েছে") : r.title, body: r.ok ? [r.title, r.detail].filter(Boolean).join(" · ") : r.detail, tone: r.ok ? "ok" : "warn" });
       return;
     }
     if (list.length === 1) {
@@ -133,22 +190,32 @@ export const ProductFinder = forwardRef<HTMLInputElement, { className?: string }
     }
   };
 
-  /** Phone-camera scans: add straight to the cart, but never past the stock on the shelf. */
-  const onScan = (code: string): ScanOutcome => {
+  /** This device's own camera: a repeat asks right here, and the scan waits for the answer. */
+  const onCameraScan = async (code: string): Promise<ScanOutcome> => {
     const hit = findByCode(active, code);
-    if (!hit || !hit.v.active) return { ok: false, title: t("Not one of your products", "আপনার কোনো পণ্যের সাথে মেলেনি"), detail: code };
-    const name = t(hit.p.name, hit.p.nameBn ?? hit.p.name);
-    const opts = Object.values(hit.v.options).join(" / ");
-    const have = draft.lines.filter((l) => l.variantId === hit.v.id).reduce((n, l) => n + l.qty, 0);
-    if (!allowNegative && available(hit.v) - have <= 0) {
-      return { ok: false, title: t(`${name} — out of stock`, `${name} — স্টকে নেই`), detail: have ? t(`All ${have} in stock are already in the cart`, `স্টকের ${f.num(have)}টিই কার্টে আছে`) : opts || undefined };
-    }
-    addVariant(hit.v.id);
-    return { ok: true, title: name, detail: [opts, f.money(hit.v.price), t(`${have + 1} in cart`, `কার্টে ${f.num(have + 1)}টি`)].filter(Boolean).join(" · ") };
+    if (!hit || !hit.v.active) return notFound(code);
+    if (!isRepeat(hit)) return addScanned(hit);
+    const n = await askQty(hit);
+    return n === null ? busyAsking(hit) : applyQty(hit, n);
   };
 
-  // On this screen a paired phone's scans go straight into the cart, under the same rules.
-  usePhoneScanTarget(onScan);
+  /**
+   * A paired phone scanning for this computer: a repeat asks for the quantity
+   * here, on the computer, and the phone is told to look up — it doesn't wait.
+   */
+  const onPhoneScan = (code: string): ScanOutcome => {
+    const hit = findByCode(active, code);
+    if (!hit || !hit.v.active) return notFound(code);
+    if (!isRepeat(hit)) return addScanned(hit);
+    void askQty(hit).then((n) => {
+      if (n === null) return;
+      const r = applyQty(hit, n);
+      toast({ title: r.title, body: r.detail, tone: "ok" });
+    });
+    return { ok: false, quiet: true, title: t("Scanned again — set the quantity on the computer", "আবার স্ক্যান — কম্পিউটারে সংখ্যা ঠিক করুন"), detail: nameOf(hit) };
+  };
+
+  usePhoneScanTarget(onPhoneScan);
   const { link: phoneLink, open: openPhoneLink } = usePhoneScanner();
 
   return (
@@ -163,7 +230,7 @@ export const ProductFinder = forwardRef<HTMLInputElement, { className?: string }
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                onEnter();
+                void onEnter();
               } else if (e.key === "Escape") setQ("");
             }}
             placeholder={t("Search or scan — name, SKU, barcode", "খুঁজুন বা স্ক্যান করুন — নাম, SKU, বারকোড")}
@@ -282,7 +349,8 @@ export const ProductFinder = forwardRef<HTMLInputElement, { className?: string }
         </ul>
       )}
       <VariantPicker product={picker} onClose={() => setPicker(null)} />
-      <CameraScanner open={scanning} onClose={() => setScanning(false)} onCode={onScan} />
+      <CameraScanner open={scanning} onClose={() => setScanning(false)} onCode={onCameraScan} />
+      {quantityNode}
     </div>
   );
 });
