@@ -379,7 +379,7 @@ export function BrandStudio() {
               <Choice key={v} selected={theme.display === v} onClick={() => setTheme({ display: v })} label={name}>
                 <span className="block rounded-sm bg-surface-2 px-3 py-2.5">
                   <span className="block truncate text-[22px] font-semibold leading-tight text-ink" style={{ fontFamily: `${family}, var(--font-noto-bn)` }}>
-                    বেচাকেনা Aa
+                    হাটখাতা Aa
                   </span>
                   <span className="mt-0.5 block truncate text-[11.5px] text-ink-3">{note}</span>
                 </span>

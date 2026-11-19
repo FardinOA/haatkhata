@@ -11,11 +11,11 @@ const hind = Hind_Siliguri({ variable: "--font-hind", subsets: ["latin", "bengal
 const baloo = Baloo_Da_2({ variable: "--font-baloo", subsets: ["latin", "bengali"], display: "swap", preload: false });
 
 export const metadata: Metadata = {
-  title: { default: "BechaKena", template: "%s · BechaKena" },
+  title: { default: "HaatKhata", template: "%s · HaatKhata" },
   description: "Stock, sales and invoicing for online and social sellers.",
-  applicationName: "BechaKena",
+  applicationName: "HaatKhata",
   icons: { apple: "/apple-icon.png" },
-  appleWebApp: { capable: true, title: "BechaKena", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "HaatKhata", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

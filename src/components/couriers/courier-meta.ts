@@ -54,6 +54,7 @@ export const PROVIDERS: Record<CourierProvider, { name: string; color: string; s
       { key: "username", en: "Username", bn: "ইউজারনেম" },
       { key: "password", en: "Password", bn: "পাসওয়ার্ড", secret: true },
       { key: "apiKey", en: "Paperfly key", bn: "পেপারফ্লাই কী", secret: true },
+      { key: "storeName", en: "Store name (as registered with Paperfly)", bn: "স্টোরের নাম (পেপারফ্লাইতে যেমন)" },
     ],
     note: "Paperfly shares API credentials with registered merchants on request.",
     noteBn: "অনুরোধ করলে পেপারফ্লাই নিবন্ধিত মার্চেন্টকে API তথ্য দেয়।",
@@ -65,6 +66,7 @@ export const PROVIDERS: Record<CourierProvider, { name: string; color: string; s
     fields: [
       { key: "clientId", en: "Client ID", bn: "ক্লায়েন্ট আইডি" },
       { key: "clientSecret", en: "Client secret", bn: "ক্লায়েন্ট সিক্রেট", secret: true },
+      { key: "clientContext", en: "Client context", bn: "ক্লায়েন্ট কনটেক্সট", secret: true },
       { key: "storeId", en: "Store ID", bn: "স্টোর আইডি" },
     ],
     note: "Request API access from your Carrybee account manager.",

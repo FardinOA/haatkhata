@@ -306,7 +306,7 @@ export function DataSettings() {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `bechakena-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `haatkhata-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
     toast({ title: t("Backup downloaded", "ব্যাকআপ ডাউনলোড হয়েছে") });

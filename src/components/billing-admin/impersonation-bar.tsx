@@ -1,6 +1,6 @@
 "use client";
 /**
- * Persistent bar while a BechaKena admin is signed in as a shop owner
+ * Persistent bar while a HaatKhata admin is signed in as a shop owner
  * (FR-ADM-01). Mount at the very top of the app shell.
  */
 import { Eye, SignOut } from "@phosphor-icons/react";

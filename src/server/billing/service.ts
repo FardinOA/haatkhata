@@ -84,7 +84,7 @@ export async function startCheckout(input: { businessId: string; userId: string;
   const start = await gateway.create({
     paymentId,
     amount: q.total,
-    description: `BechaKena ${q.plan.name} — ${q.months} month${q.months > 1 ? "s" : ""} (${b.name})`,
+    description: `HaatKhata ${q.plan.name} — ${q.months} month${q.months > 1 ? "s" : ""} (${b.name})`,
     customer: { name: u?.name || b.name, phone: u?.phone ?? b.phone, email: b.email || undefined },
     urls: {
       success: `${app}/api/billing/return/sslcommerz`,
@@ -207,7 +207,7 @@ export async function runBillingHousekeeping(now = new Date()) {
         .onConflictDoNothing()
         .returning();
       if (inserted.length && b.phone) {
-        await sendSms(b.phone, `BechaKena: your ${effectivePlan(b.plan).name} plan renews in ${mark} day${mark > 1 ? "s" : ""}. Renew from Settings to keep your limits.`);
+        await sendSms(b.phone, `HaatKhata: your ${effectivePlan(b.plan).name} plan renews in ${mark} day${mark > 1 ? "s" : ""}. Renew from Settings to keep your limits.`);
         reminded++;
       }
     }

@@ -15,7 +15,7 @@ export const POST = route(async (_req: Request, ctx: RouteContext<"/api/outbound
   const [ep] = await withTenant(a.businessId, (tx) => tx.select().from(webhookEndpoints).where(eq(webhookEndpoints.id, id)));
   if (!ep) throw new HttpError(404, "Endpoint not found");
   const did = `whd_${randomBytes(9).toString("base64url")}`;
-  await withTenant(a.businessId, (tx) => tx.insert(webhookDeliveries).values({ businessId: a.businessId, id: did, endpointId: id, event: "ping", payload: { id: `evt_${randomBytes(6).toString("hex")}`, event: "ping", created: new Date().toISOString(), data: { message: "Hello from BechaKena" } } }));
+  await withTenant(a.businessId, (tx) => tx.insert(webhookDeliveries).values({ businessId: a.businessId, id: did, endpointId: id, event: "ping", payload: { id: `evt_${randomBytes(6).toString("hex")}`, event: "ping", created: new Date().toISOString(), data: { message: "Hello from HaatKhata" } } }));
   await processDueDeliveries(5);
   const [d] = await withTenant(a.businessId, (tx) => tx.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, did)));
   return { delivery: d };

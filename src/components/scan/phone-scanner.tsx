@@ -65,7 +65,7 @@ export function PhoneScanner({ token, lang }: { token: string; lang: "en" | "bn"
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col bg-canvas px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-[max(14px,env(safe-area-inset-top))]">
       <header className="flex items-center justify-between gap-3">
-        <span className="font-display text-[15px] font-semibold tracking-[-0.01em] text-ink">BechaKena</span>
+        <span className="font-display text-[15px] font-semibold tracking-[-0.01em] text-ink">HaatKhata</span>
         <span
           className={cn(
             "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium",

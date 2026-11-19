@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, CheckCircle, Package, Storefront, Truck, Wallet } from "@phosphor-icons/react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "@/components/bits";
@@ -122,7 +123,7 @@ export default function LoginPage() {
           <span className="grid size-10 place-items-center rounded-[12px] bg-white/15">
             <Package className="size-6" weight="duotone" />
           </span>
-          <span className="font-display text-xl font-semibold">BechaKena</span>
+          <span className="font-display text-xl font-semibold">HaatKhata</span>
         </div>
         <div className="max-w-[520px]">
           <p className="font-display text-[44px] font-semibold leading-[1.05] tracking-[-0.02em]">{t("Every order, from the chat to the cash.", "চ্যাট থেকে টাকা পর্যন্ত, প্রতিটি অর্ডার।")}</p>
@@ -156,7 +157,7 @@ export default function LoginPage() {
             <span className="grid size-9 place-items-center rounded-[11px] bg-brand text-brand-contrast">
               <Package className="size-5" weight="duotone" />
             </span>
-            <span className="font-display text-lg font-semibold">BechaKena</span>
+            <span className="font-display text-lg font-semibold">HaatKhata</span>
           </span>
           <button type="button" onClick={() => setLang(lang === "en" ? "bn" : "en")} className="h-9 rounded-full px-3 text-[13px] font-medium text-ink-2 hover:bg-sunken">
             {lang === "en" ? "বাংলা" : "English"}
@@ -217,7 +218,17 @@ export default function LoginPage() {
               >
                 {t("Explore a demo shop first", "আগে ডেমো দোকান ঘুরে দেখুন")}
               </Button>
-              <p className="mt-6 text-center text-xs leading-relaxed text-ink-4">{t("By continuing you agree to the Terms and Privacy Policy. Your customers' data belongs to you.", "চালিয়ে গেলে আপনি শর্তাবলী ও গোপনীয়তা নীতিতে সম্মত হচ্ছেন। কাস্টমারের তথ্য আপনার।")}</p>
+              <p className="mt-6 text-center text-xs leading-relaxed text-ink-4">
+                {t("By continuing you agree to the ", "চালিয়ে গেলে আপনি ")}
+                <Link href="/terms" className="underline underline-offset-2 hover:text-ink-2">
+                  {t("Terms", "শর্তাবলী")}
+                </Link>
+                {t(" and ", " ও ")}
+                <Link href="/privacy" className="underline underline-offset-2 hover:text-ink-2">
+                  {t("Privacy Policy", "গোপনীয়তা নীতি")}
+                </Link>
+                {t(". Your customers' data belongs to you.", "-তে সম্মত হচ্ছেন। কাস্টমারের তথ্য আপনার।")}
+              </p>
             </form>
           )}
 

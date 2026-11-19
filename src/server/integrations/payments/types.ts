@@ -21,7 +21,7 @@ export interface PayAdapter {
   fields: { key: string; en: string; bn: string; secret?: boolean; multiline?: boolean }[];
   test(creds: PayCreds): Promise<void>;
   /** Starts a checkout and returns where to send the buyer. */
-  start(creds: PayCreds, p: { token: string; amount: number; reference: string; callbackUrl: string; payerReference: string }): Promise<StartResult>;
+  start(creds: PayCreds, p: { token: string; amount: number; reference: string; callbackUrl: string; payerReference: string; ip?: string }): Promise<StartResult>;
   /** Confirms the payment with the provider from callback parameters. Never trusts the browser. */
   verify(creds: PayCreds, params: URLSearchParams, link: { providerRef: string | null; amount: number }): Promise<VerifiedPayment>;
 }

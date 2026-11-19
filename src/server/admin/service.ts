@@ -31,7 +31,7 @@ const monthStart = (now: Date) => new Date(`${currentMonth(now)}-01T00:00:00+06:
 export function requireSuperAdmin(auth: AuthContext | null): asserts auth is AuthContext {
   if (!auth) throw new HttpError(401, "Please sign in");
   // While impersonating, the session belongs to the shop owner — admin tools stay off.
-  if (!auth.user.isSuperAdmin || auth.impersonatedBy) throw new HttpError(403, "This area is for BechaKena staff only");
+  if (!auth.user.isSuperAdmin || auth.impersonatedBy) throw new HttpError(403, "This area is for HaatKhata staff only");
 }
 
 /**
@@ -61,7 +61,7 @@ export async function claimImpersonation(ticket: string) {
   const t = readHandoff(ticket);
   if (!t) throw new HttpError(400, "This link has expired. Start again from the admin console.");
   const [admin] = await db.select({ isSuperAdmin: users.isSuperAdmin }).from(users).where(eq(users.id, t.admin));
-  if (!admin?.isSuperAdmin) throw new HttpError(403, "This area is for BechaKena staff only");
+  if (!admin?.isSuperAdmin) throw new HttpError(403, "This area is for HaatKhata staff only");
   const used = await db.select({ id: adminActions.id }).from(adminActions).where(and(eq(adminActions.action, "impersonate.claim"), sql`${adminActions.details}->>'nonce' = ${t.nonce}`));
   if (used.length) throw new HttpError(400, "This link has already been used. Start again from the admin console.");
   await logAdmin(t.admin, "impersonate.claim", t.business, null, { nonce: t.nonce, ownerUserId: t.owner });

@@ -106,7 +106,7 @@ export function Hero({ signedIn }: { signedIn: boolean }) {
         </h1>
 
         <p className="mt-6 max-w-[580px] text-pretty text-[17px] leading-relaxed text-ink-3 md:text-[19px]">
-          {t("BechaKena keeps your stock, invoices, couriers and cash on delivery in step, so you can answer the next customer instead of chasing the last parcel.", "স্টক, ইনভয়েস, কুরিয়ার আর ক্যাশ অন ডেলিভারি সব মিলিয়ে রাখে বেচাকেনা। আপনি শুধু পরের কাস্টমারকে উত্তর দিন।")}
+          {t("HaatKhata keeps your stock, invoices, couriers and cash on delivery in step, so you can answer the next customer instead of chasing the last parcel.", "স্টক, ইনভয়েস, কুরিয়ার আর ক্যাশ অন ডেলিভারি সব মিলিয়ে রাখে হাটখাতা। আপনি শুধু পরের কাস্টমারকে উত্তর দিন।")}
         </p>
 
         <div className="mt-9 flex flex-wrap justify-center gap-3">

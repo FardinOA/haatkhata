@@ -119,7 +119,7 @@ export async function publicInfo(token: string) {
   };
 }
 
-export async function startPayment(token: string, origin: string) {
+export async function startPayment(token: string, origin: string, ip?: string) {
   const link = await byToken(token);
   if (link.status !== "open") throw new HttpError(400, link.status === "paid" ? "Already paid — thank you!" : "This link is no longer active");
   if (link.expiresAt < new Date()) throw new HttpError(400, "This link has expired. Ask the shop for a new one.");
@@ -131,6 +131,7 @@ export async function startPayment(token: string, origin: string) {
     reference: `Order ${o?.no ?? ""}`,
     payerReference: ((o?.customer as { phone?: string } | null)?.phone ?? "buyer").slice(-11),
     callbackUrl: `${origin}/api/payment-links/callback/${link.provider}?token=${encodeURIComponent(token)}`,
+    ip,
   });
   if (res.providerRef) await db.update(paymentLinks).set({ providerRef: res.providerRef }).where(and(eq(paymentLinks.businessId, link.businessId), eq(paymentLinks.id, link.id)));
   return { redirectUrl: res.redirectUrl };

@@ -47,13 +47,15 @@ async function cityZone(c: Credentials, district: string, area: string) {
   return { cityId, zoneId };
 }
 
+/** Pathao names statuses three ways ("Pickup_Requested", "pickup-requested", "Pickup Requested"); all normalise to spaces. */
 export function mapPathao(s: string): CourierStatus {
-  const v = s.toLowerCase();
+  const v = s.toLowerCase().replace(/[_-]+/g, " ").trim();
   if (v.includes("partial")) return "partial";
-  if (v === "delivered") return "delivered";
-  if (v.includes("return") || v === "cancelled" || v === "delivery failed") return "returned";
+  // Payment and exchange events arrive after delivery; they must not reopen the parcel.
+  if (v === "delivered" || v === "paid" || v === "payment invoice" || v === "exchanged") return "delivered";
+  if (v.includes("return") || v.includes("cancel") || v === "delivery failed") return "returned";
   if (v.includes("hold")) return "hold";
-  if (v === "pending" || v.includes("pickup requested")) return "booked";
+  if (v === "pending" || v === "created" || v === "pickup failed" || v.includes("pickup requested")) return "booked";
   return "in_transit";
 }
 
@@ -91,9 +93,12 @@ export const pathao: CourierAdapter = {
     return { status: mapPathao(res.data.order_status), raw: res.data.order_status };
   },
   parseWebhook(body) {
-    // TODO(pathao): confirm the webhook signature header with Pathao; the
-    // per-account secret in the callback URL already authenticates the sender.
+    // Pathao also sends the merchant's dashboard secret as X-PATHAO-Signature
+    // (a plain string, not an HMAC). The per-account key in the callback URL
+    // already authenticates the sender, so we don't require it. The
+    // "webhook_integration" handshake is answered in the webhook route.
     const b = body as { consignment_id?: string; event?: string; order_status?: string };
+    if (b.event === "order.updated") return null;
     const raw = b.order_status ?? b.event?.replace(/^order\./, "").replace(/[_-]/g, " ");
     if (!b.consignment_id || !raw) return null;
     return { consignmentId: b.consignment_id, status: mapPathao(raw), raw };

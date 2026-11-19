@@ -14,7 +14,7 @@ export function pushConfigured() {
   const pub = process.env.VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   if (pub && priv) {
-    webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? "mailto:support@bechakena.app", pub, priv);
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT ?? "mailto:support@haatkhata.com", pub, priv);
     configured = true;
   } else configured = false;
   return configured;

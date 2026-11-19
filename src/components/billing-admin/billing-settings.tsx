@@ -358,8 +358,8 @@ function Referral({ data, onApplied }: { data: Usage; onApplied: () => void }) {
   const [busy, setBusy] = useState(false);
   const link = typeof window !== "undefined" && data.referral.code ? `${window.location.origin}/login?ref=${data.referral.code}` : "";
   const message = t(
-    `I run ${businessName} on BechaKena — stock, orders and invoices in one place. Use my code ${data.referral.code} and we both get a bonus month: ${link}`,
-    `আমি ${businessName} চালাই বেচাকেনা দিয়ে — স্টক, অর্ডার আর ইনভয়েস এক জায়গায়। আমার কোড ${data.referral.code} দিলে দুজনেই এক মাস বোনাস পাব: ${link}`,
+    `I run ${businessName} on HaatKhata — stock, orders and invoices in one place. Use my code ${data.referral.code} and we both get a bonus month: ${link}`,
+    `আমি ${businessName} চালাই হাটখাতা দিয়ে — স্টক, অর্ডার আর ইনভয়েস এক জায়গায়। আমার কোড ${data.referral.code} দিলে দুজনেই এক মাস বোনাস পাব: ${link}`,
   );
   return (
     <Card title={t("Invite a seller, get a bonus month", "বিক্রেতা আনুন, এক মাস বোনাস নিন")} sub={t("When they pay for their first month, you both get one month added to your plan.", "তারা প্রথম মাসের টাকা দিলে দুজনের প্ল্যানেই এক মাস যোগ হবে।")} aside={<Gift className="size-6 text-cash" weight="duotone" />}>

@@ -243,7 +243,7 @@ export function PhoneLinkSheet({ open, onClose, link, onUseCamera }: { open: boo
             <p className="text-xs text-ink-3">
               {link.status === "signedout" ? (
                 <>
-                  {t("The phone scanner needs your BechaKena account, and each web address signs in separately.", "ফোন স্ক্যানারের জন্য BechaKena অ্যাকাউন্ট লাগবে, আর প্রতিটি ওয়েব ঠিকানায় আলাদা লগইন হয়।")}{" "}
+                  {t("The phone scanner needs your HaatKhata account, and each web address signs in separately.", "ফোন স্ক্যানারের জন্য HaatKhata অ্যাকাউন্ট লাগবে, আর প্রতিটি ওয়েব ঠিকানায় আলাদা লগইন হয়।")}{" "}
                   <Link href="/login" className="font-medium text-brand-ink underline-offset-2 hover:underline">
                     {t("Sign in", "লগইন করুন")}
                   </Link>
@@ -251,7 +251,7 @@ export function PhoneLinkSheet({ open, onClose, link, onUseCamera }: { open: boo
               ) : link.status === "retrying" ? (
                 t("Check the internet connection — it keeps trying by itself.", "ইন্টারনেট দেখুন — নিজে থেকেই চেষ্টা করছে।")
               ) : (
-                t("You can close this — the phone stays connected while BechaKena is open on this computer.", "এটি বন্ধ করতে পারেন — এই কম্পিউটারে BechaKena খোলা থাকলে ফোন যুক্ত থাকবে।")
+                t("You can close this — the phone stays connected while HaatKhata is open on this computer.", "এটি বন্ধ করতে পারেন — এই কম্পিউটারে HaatKhata খোলা থাকলে ফোন যুক্ত থাকবে।")
               )}
             </p>
           </div>
@@ -303,7 +303,7 @@ export function PhoneLinkSheet({ open, onClose, link, onUseCamera }: { open: boo
           </div>
           {insecure && (
             <p className="mt-2 rounded-sm border border-warn/25 bg-warn-soft px-3 py-2 text-xs text-warn">
-              {t("This link isn't https, so the phone's browser won't open the camera. Open BechaKena on its https address (or start the dev server with npm run dev:https) and reopen this.", "লিংকটি https নয়, তাই ফোনের ব্রাউজার ক্যামেরা খুলবে না। BechaKena এর https ঠিকানায় খুলুন (অথবা npm run dev:https চালান), তারপর আবার খুলুন।")}
+              {t("This link isn't https, so the phone's browser won't open the camera. Open HaatKhata on its https address (or start the dev server with npm run dev:https) and reopen this.", "লিংকটি https নয়, তাই ফোনের ব্রাউজার ক্যামেরা খুলবে না। HaatKhata এর https ঠিকানায় খুলুন (অথবা npm run dev:https চালান), তারপর আবার খুলুন।")}
             </p>
           )}
           <p className="mt-2 text-xs text-ink-3">

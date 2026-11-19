@@ -184,7 +184,7 @@ export function Storefront({ data }: { data: PublicCatalogue }) {
         <p className="mt-2">
           {t("Catalogue by", "ক্যাটালগ তৈরি")}{" "}
           <Link href="/" className="font-semibold text-ink-3 hover:text-ink">
-            BechaKena
+            HaatKhata
           </Link>
         </p>
       </footer>

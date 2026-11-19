@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-export const metadata: Metadata = { title: "API reference", description: "BechaKena REST API and webhooks for developers." };
+export const metadata: Metadata = { title: "API reference", description: "HaatKhata REST API and webhooks for developers." };
 
 const SECTIONS = [
   ["auth", "Authentication"],
@@ -50,7 +50,7 @@ export default function DevelopersPage() {
         <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-5 py-4">
           <Link href="/dashboard" className="flex items-center gap-2.5">
             <span className="grid size-8 place-items-center rounded-[10px] bg-brand font-display text-sm font-semibold text-brand-contrast">বে</span>
-            <span className="font-display text-[15px] font-semibold text-ink">BechaKena for developers</span>
+            <span className="font-display text-[15px] font-semibold text-ink">HaatKhata for developers</span>
           </Link>
           <Link href="/settings" className="text-[13px] font-medium text-brand-ink hover:underline">
             Manage keys in Settings
@@ -83,7 +83,7 @@ export default function DevelopersPage() {
             <p>
               Create a key in <b>Settings → Developers</b>. Send it as a bearer token. Keys are scoped: <code>read</code> for lists and lookups, <code>write</code> to create orders. A key only ever sees its own shop&apos;s data.
             </p>
-            <Code label="Request">{`curl https://your-shop.bechakena.app/api/v1/products \\
+            <Code label="Request">{`curl https://your-shop.haatkhata.com/api/v1/products \\
   -H "Authorization: Bearer bk_live_…"`}</Code>
           </Section>
 
@@ -124,7 +124,7 @@ export default function DevelopersPage() {
             <p className="mt-3">
               Orders go through the same rules as the app: stock is held on confirm, limits and prices are checked. Prices come from your catalogue. Send an <code>Idempotency-Key</code> header so a retried request never creates a second order.
             </p>
-            <Code label="Request">{`curl -X POST https://your-shop.bechakena.app/api/v1/orders \\
+            <Code label="Request">{`curl -X POST https://your-shop.haatkhata.com/api/v1/orders \\
   -H "Authorization: Bearer bk_live_…" \\
   -H "Idempotency-Key: web-order-58213" \\
   -H "Content-Type: application/json" \\
@@ -163,7 +163,7 @@ export default function DevelopersPage() {
 
           <Section id="verify" title="Verifying signatures">
             <p>
-              Every request carries <code>X-BechaKena-Signature: t=&lt;unix time&gt;,v1=&lt;hex&gt;</code>. Compute HMAC-SHA256 of <code>t + &quot;.&quot; + raw body</code> with your endpoint&apos;s signing secret, compare in constant time, and reject anything older than five minutes.
+              Every request carries <code>X-HaatKhata-Signature: t=&lt;unix time&gt;,v1=&lt;hex&gt;</code>. Compute HMAC-SHA256 of <code>t + &quot;.&quot; + raw body</code> with your endpoint&apos;s signing secret, compare in constant time, and reject anything older than five minutes.
             </p>
             <Code label="Node.js">{`import { createHmac, timingSafeEqual } from "node:crypto";
 

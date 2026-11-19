@@ -4,8 +4,8 @@ import "server-only";
  * Request data is encrypted with Nagad's public key and signed with the
  * merchant private key (RSA, SHA256withRSA); Nagad's responses are
  * encrypted to the merchant key. NAGAD_BASE_URL defaults to the sandbox.
- * TODO(nagad): confirm the client IP header and callback parameters against
- * the integration kit Nagad issues with your merchant account.
+ * Headers, paths and callback parameters match three independent open-source
+ * integrations (Nagad's own kit comes only with a merchant account).
  */
 import { constants, createSign, privateDecrypt, publicEncrypt } from "node:crypto";
 import { jsonCall, type PayAdapter, type PayCreds } from "./types";
@@ -18,7 +18,12 @@ const sign = (c: PayCreds, data: object) => createSign("SHA256").update(JSON.str
 const decrypt = (c: PayCreds, b64: string) => JSON.parse(privateDecrypt({ key: pem(c.merchantPrivateKey, "PRIVATE"), padding: constants.RSA_PKCS1_PADDING }, Buffer.from(b64, "base64")).toString("utf8"));
 
 const stamp = () => new Date(Date.now() + 6 * 3_600_000).toISOString().replace(/[-:T]/g, "").slice(0, 14); // Asia/Dhaka
-const headers = { "X-KM-Api-Version": "v-0.2.0", "X-KM-Client-Type": "PC_WEB", "X-KM-IP-V4": "127.0.0.1" };
+/** Nagad wants a real IPv4 in X-KM-IP-V4: the buyer's, or this server's public one (NAGAD_SERVER_IP) when we don't have it. */
+const kmHeaders = (ip?: string) => ({
+  "X-KM-Api-Version": "v-0.2.0",
+  "X-KM-Client-Type": "PC_WEB",
+  "X-KM-IP-V4": ip && /^\d{1,3}(\.\d{1,3}){3}$/.test(ip) && !ip.startsWith("127.") ? ip : process.env.NAGAD_SERVER_IP || "127.0.0.1",
+});
 
 export const nagad: PayAdapter = {
   provider: "nagad",
@@ -39,14 +44,14 @@ export const nagad: PayAdapter = {
     const sensitive = { merchantId: c.merchantId, datetime, orderId, challenge: p.token.slice(0, 40) };
     const init = await jsonCall<{ sensitiveData: string; signature: string }>(`${BASE}/check-out/initialize/${c.merchantId}/${orderId}?locale=EN`, {
       method: "POST",
-      headers,
+      headers: kmHeaders(p.ip),
       body: JSON.stringify({ accountNumber: c.merchantNumber, dateTime: datetime, sensitiveData: encrypt(c, sensitive), signature: sign(c, sensitive) }),
     });
     const { paymentReferenceId, challenge } = decrypt(c, init.sensitiveData) as { paymentReferenceId: string; challenge: string };
     const order = { merchantId: c.merchantId, orderId, currencyCode: "050", amount: p.amount.toFixed(2), challenge };
     const done = await jsonCall<{ status: string; callBackUrl?: string; message?: string }>(`${BASE}/check-out/complete/${paymentReferenceId}`, {
       method: "POST",
-      headers,
+      headers: kmHeaders(p.ip),
       body: JSON.stringify({ sensitiveData: encrypt(c, order), signature: sign(c, order), merchantCallbackURL: p.callbackUrl, additionalMerchantInfo: { reference: p.reference } }),
     });
     if (done.status !== "Success" || !done.callBackUrl) throw new Error(done.message ?? "Nagad couldn't start the payment");
@@ -55,7 +60,7 @@ export const nagad: PayAdapter = {
   async verify(_c, params, link) {
     const ref = params.get("payment_ref_id");
     if (!ref || params.get("status") !== "Success") return { ok: false, amount: 0, message: params.get("message") ?? "Payment failed" };
-    const v = await jsonCall<{ status: string; amount: string; issuerPaymentRefNo?: string; paymentRefId?: string }>(`${BASE}/verify/payment/${encodeURIComponent(ref)}`, { method: "GET", headers });
+    const v = await jsonCall<{ status: string; amount: string; issuerPaymentRefNo?: string; paymentRefId?: string }>(`${BASE}/verify/payment/${encodeURIComponent(ref)}`, { method: "GET", headers: kmHeaders() });
     const ok = v.status === "Success" && Number(v.amount) >= link.amount - 0.01 && (!link.providerRef || link.providerRef === ref);
     return { ok, amount: Number(v.amount), trxId: v.issuerPaymentRefNo, providerRef: ref, message: ok ? undefined : "Nagad couldn't confirm this payment" };
   },

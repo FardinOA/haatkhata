@@ -27,7 +27,7 @@ export function JourneyScroll() {
 
   const chapters: { title: string; body: string; screen: ReactNode; tone: string }[] = (
   [
-    { title: t("Paste the chat. The order fills itself.", "চ্যাট পেস্ট করুন। অর্ডার নিজেই তৈরি।"), body: t("BechaKena reads the name, phone, address and what they want, in Bangla, Banglish or English. A known customer shows how often they return parcels, and stock is held the moment you confirm.", "নাম, ফোন, ঠিকানা আর কী চান — বাংলা, বাংলিশ বা ইংরেজি — বেচাকেনা নিজেই বুঝে নেয়। পুরোনো কাস্টমার হলে দেখায় কত পার্সেল ফেরত দিয়েছেন, আর নিশ্চিত করলেই স্টক রাখা হয়।"), screen: <Shot name="order" />, tone: "" },
+    { title: t("Paste the chat. The order fills itself.", "চ্যাট পেস্ট করুন। অর্ডার নিজেই তৈরি।"), body: t("HaatKhata reads the name, phone, address and what they want, in Bangla, Banglish or English. A known customer shows how often they return parcels, and stock is held the moment you confirm.", "নাম, ফোন, ঠিকানা আর কী চান — বাংলা, বাংলিশ বা ইংরেজি — হাটখাতা নিজেই বুঝে নেয়। পুরোনো কাস্টমার হলে দেখায় কত পার্সেল ফেরত দিয়েছেন, আর নিশ্চিত করলেই স্টক রাখা হয়।"), screen: <Shot name="order" />, tone: "" },
     { title: t("The invoice goes back into the chat", "ইনভয়েস চলে যায় চ্যাটেই"), body: t("Your logo, your colour, Bangla or English. Share it as a picture straight to Messenger or WhatsApp.", "আপনার লোগো, আপনার রং, বাংলা বা ইংরেজি। ছবি হিসেবে সরাসরি মেসেঞ্জার বা হোয়াটসঅ্যাপে পাঠান।"), screen: <Shot name="invoice" />, tone: "" },
     { title: t("The courier is booked in one tap", "এক ট্যাপে কুরিয়ার বুকিং"), body: t("Steadfast or Sundarban. The label prints, the tracking number is saved, and the parcel shows as on its way.", "স্টেডফাস্ট বা সুন্দরবন। লেবেল প্রিন্ট হয়, ট্র্যাকিং নম্বর সেভ হয়, পার্সেল চলে যায় পথে।"), screen: <Shot name="label" />, tone: "" },
     { title: t("And you know when the cash lands", "আর জানেন টাকা কখন হাতে এলো"), body: t("Delivered or returned, stock moves by itself. You see exactly how much each courier still owes you — and your real profit.", "ডেলিভারি হোক বা ফেরত, স্টক নিজেই ঠিক হয়। কোন কুরিয়ারের কাছে কত বাকি আর আসল লাভ কত — সব পরিষ্কার।"), screen: <Shot name="cash" />, tone: "" },
@@ -37,7 +37,7 @@ export function JourneyScroll() {
     <section id="how" className="mx-auto max-w-[1120px] px-5 py-28 md:px-8 md:py-40">
       <SectionHead
         title={t("The order doesn't end at the sale. Neither do we.", "বিক্রিতেই অর্ডার শেষ হয় না। আমাদের কাজও না।")}
-        sub={t("Packing, courier, cash on delivery, returns. BechaKena follows every order to the end.", "প্যাকিং, কুরিয়ার, ক্যাশ অন ডেলিভারি, ফেরত। বেচাকেনা প্রতিটা অর্ডারের শেষ পর্যন্ত সাথে থাকে।")}
+        sub={t("Packing, courier, cash on delivery, returns. HaatKhata follows every order to the end.", "প্যাকিং, কুরিয়ার, ক্যাশ অন ডেলিভারি, ফেরত। হাটখাতা প্রতিটা অর্ডারের শেষ পর্যন্ত সাথে থাকে।")}
       />
 
       <div className="mt-20 grid gap-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-24">
@@ -92,7 +92,7 @@ function Phone({ children }: { children: ReactNode }) {
 /** A real screen from the app on a phone, captured from the demo shop in the visitor's language. */
 function Shot({ name }: { name: "order" | "invoice" | "label" | "cash" }) {
   const { t, lang } = useSite();
-  const alt = { order: t("Order screen in BechaKena", "বেচাকেনার অর্ডার স্ক্রিন"), invoice: t("80 mm invoice in BechaKena", "বেচাকেনার ৮০ মিমি ইনভয়েস"), label: t("Parcel label in BechaKena", "বেচাকেনার পার্সেল লেবেল"), cash: t("Cash and COD screen in BechaKena", "বেচাকেনার টাকা ও COD স্ক্রিন") }[name];
+  const alt = { order: t("Order screen in HaatKhata", "হাটখাতার অর্ডার স্ক্রিন"), invoice: t("80 mm invoice in HaatKhata", "হাটখাতার ৮০ মিমি ইনভয়েস"), label: t("Parcel label in HaatKhata", "হাটখাতার পার্সেল লেবেল"), cash: t("Cash and COD screen in HaatKhata", "হাটখাতার টাকা ও COD স্ক্রিন") }[name];
   return (
     <div className="absolute inset-x-0 bottom-0 top-9 bg-surface">
       <Image src={`/landing/phone-${name}-${lang}.png`} alt={alt} fill sizes="280px" className="object-cover object-top" />

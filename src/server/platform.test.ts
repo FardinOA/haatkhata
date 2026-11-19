@@ -271,8 +271,8 @@ describe("outbound webhooks", () => {
     await enqueueEvent(s.businessId, "order.created", { id: "o_1", number: 1001 });
     await processDueDeliveries();
     const got = received.at(-1)!;
-    expect(got.headers["x-bechakena-event"]).toBe("order.created");
-    expect(verifyWebhookSignature(secret, got.body, String(got.headers["x-bechakena-signature"]))).toBe(true);
+    expect(got.headers["x-haatkhata-event"]).toBe("order.created");
+    expect(verifyWebhookSignature(secret, got.body, String(got.headers["x-haatkhata-signature"]))).toBe(true);
     const [d1] = await withTenant(s.businessId, (tx) => tx.select().from(webhookDeliveries));
     expect(d1).toMatchObject({ status: "delivered", attempts: 1, lastStatus: 204 });
 

@@ -11,10 +11,23 @@ export const bkashConfigured = () => !!(process.env.BKASH_APP_KEY && process.env
 
 let cached: { token: string; until: number } | null = null;
 
+/** bKash's integration guide: give every API call 30 seconds, then treat it as timed out. */
+const TIMEOUT_MS = 30_000;
+
+class BkashTimeout extends GatewayError {}
+
+async function post(url: string, init: RequestInit) {
+  try {
+    return await fetch(url, { ...init, method: "POST", signal: AbortSignal.timeout(TIMEOUT_MS) });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "TimeoutError") throw new BkashTimeout("bKash didn't answer in time. Please try again.");
+    throw e;
+  }
+}
+
 async function grantToken() {
   if (cached && cached.until > Date.now()) return cached.token;
-  const res = await fetch(`${base()}/tokenized/checkout/token/grant`, {
-    method: "POST",
+  const res = await post(`${base()}/tokenized/checkout/token/grant`, {
     headers: { "content-type": "application/json", accept: "application/json", username: process.env.BKASH_USERNAME!, password: process.env.BKASH_PASSWORD! },
     body: JSON.stringify({ app_key: process.env.BKASH_APP_KEY, app_secret: process.env.BKASH_APP_SECRET }),
   });
@@ -26,8 +39,7 @@ async function grantToken() {
 
 async function call<T>(path: string, payload: unknown): Promise<T> {
   const token = await grantToken();
-  const res = await fetch(`${base()}${path}`, {
-    method: "POST",
+  const res = await post(`${base()}${path}`, {
     headers: { "content-type": "application/json", accept: "application/json", authorization: token, "x-app-key": process.env.BKASH_APP_KEY! },
     body: JSON.stringify(payload),
   });
@@ -54,9 +66,15 @@ export const bkashGateway: Gateway = {
 export type BkashResult = { completed: boolean; trxId?: string; amount?: number; invoice?: string; message?: string };
 
 export async function executeBkash(paymentID: string): Promise<BkashResult> {
-  const body = await call<{ transactionStatus?: string; trxID?: string; amount?: string; merchantInvoiceNumber?: string; statusMessage?: string; errorMessage?: string }>("/tokenized/checkout/execute", { paymentID });
+  type Executed = { transactionStatus?: string; trxID?: string; amount?: string; merchantInvoiceNumber?: string; statusMessage?: string; errorMessage?: string };
+  let body: Executed = {};
+  try {
+    body = await call<Executed>("/tokenized/checkout/execute", { paymentID });
+  } catch (e) {
+    if (!(e instanceof BkashTimeout)) throw e;
+  }
   if (body.transactionStatus === "Completed") return { completed: true, trxId: body.trxID, amount: Number(body.amount), invoice: body.merchantInvoiceNumber };
-  // Execute can time out after the customer paid — always confirm with a query.
+  // Execute can fail or time out after the customer paid — always confirm with a query.
   return queryBkash(paymentID);
 }
 

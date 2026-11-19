@@ -297,6 +297,7 @@ export const useStore = create<Store>()(
       };
     }),
     {
+      // Pre-rename key; changing it would orphan every device's saved shop.
       name: "bechakena-pos",
       version: STORE_VERSION,
       storage: createJSONStorage(() => localStorage),

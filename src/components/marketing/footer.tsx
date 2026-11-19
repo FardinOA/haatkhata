@@ -80,7 +80,7 @@ export function Footer() {
   const line = !now
     ? ""
     : m < START
-      ? t("The shop's asleep. Orders that came in overnight are waiting in BechaKena.", "দোকান এখন ঘুমিয়ে। রাতে আসা অর্ডারগুলো বেচাকেনায় অপেক্ষা করছে।")
+      ? t("The shop's asleep. Orders that came in overnight are waiting in HaatKhata.", "দোকান এখন ঘুমিয়ে। রাতে আসা অর্ডারগুলো হাটখাতায় অপেক্ষা করছে।")
       : left > 0
         ? t(`Courier pickup in ${Math.floor(left / 60)}h ${left % 60}m. Every label prints in one tap.`, `কুরিয়ার পিকআপের বাকি ${n(Math.floor(left / 60))} ঘণ্টা ${n(left % 60)} মিনিট। সব লেবেল এক চাপে প্রিন্ট।`)
         : m < 20 * 60 + 30
@@ -105,7 +105,7 @@ export function Footer() {
                 {line}
               </p>
               <Link href="/login" className="group mt-3 inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-ink underline decoration-brand decoration-2 underline-offset-[6px]">
-                {t("Put today's orders in BechaKena", "আজকের অর্ডারগুলো বেচাকেনায় তুলুন")}
+                {t("Put today's orders in HaatKhata", "আজকের অর্ডারগুলো হাটখাতায় তুলুন")}
               </Link>
             </div>
           </div>
@@ -159,7 +159,7 @@ export function Footer() {
           <div>
             <Link href="/" className="inline-flex items-center gap-2.5">
               <LogoMark size={28} />
-              <span className="font-display text-[19px] font-semibold tracking-[-0.01em] text-ink">{t("BechaKena", "বেচাকেনা")}</span>
+              <span className="font-display text-[19px] font-semibold tracking-[-0.01em] text-ink">{t("HaatKhata", "হাটখাতা")}</span>
             </Link>
             <p className="mt-3 max-w-[300px] text-[14px] leading-relaxed text-ink-3">{t("Made in Dhaka for the sellers who keep Bangladesh shopping.", "ঢাকায় তৈরি, বাংলাদেশের বিক্রেতাদের জন্য।")}</p>
             <div className="mt-5 inline-flex rounded-full bg-sunken p-1" role="radiogroup" aria-label={t("Language", "ভাষা")}>
@@ -203,7 +203,21 @@ export function Footer() {
       </div>
 
       <div className="mx-auto flex max-w-[1120px] flex-wrap justify-between gap-2 px-5 pb-10 pt-12 text-[12.5px] text-ink-3 md:px-8">
-        <span>© 2026 BechaKena</span>
+        <span>© 2026 HaatKhata</span>
+        <nav aria-label={t("Policies", "নীতিমালা")} className="flex flex-wrap gap-x-5 gap-y-2">
+          {(
+            [
+              ["/terms", t("Terms", "শর্তাবলী")],
+              ["/privacy", t("Privacy", "গোপনীয়তা")],
+              ["/refund", t("Refunds", "রিফান্ড")],
+              ["/contact", t("Contact", "যোগাযোগ")],
+            ] as const
+          ).map(([href, label]) => (
+            <Link key={href} href={href} className="transition-colors hover:text-ink">
+              {label}
+            </Link>
+          ))}
+        </nav>
       </div>
     </footer>
   );

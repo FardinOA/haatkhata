@@ -12,7 +12,7 @@ type Preset = "owner" | "packing" | "sales";
 
 /** Swatch order and names match the site's own colour choices. */
 const COLOURS: { key: string; file: string; hex: string; en: string; bn: string; note: [string, string] }[] = [
-  { key: "lime", file: "", hex: "#C9F05A", en: "Lebu", bn: "লেবু", note: ["Fresh lime, BechaKena's own", "তাজা লেবু-সবুজ, বেচাকেনার নিজের রং"] },
+  { key: "lime", file: "", hex: "#C9F05A", en: "Lebu", bn: "লেবু", note: ["Fresh lime, HaatKhata's own", "তাজা লেবু-সবুজ, হাটখাতার নিজের রং"] },
   { key: "jamdani", file: "jamdani", hex: "#0E6B53", en: "Jamdani", bn: "জামদানি", note: ["Bottle green of Dhakai weave", "ঢাকাই বুননের গাঢ় সবুজ"] },
   { key: "shapla", file: "shapla", hex: "#C2306B", en: "Shapla", bn: "শাপলা", note: ["Water-lily pink", "শাপলা ফুলের গোলাপি"] },
   { key: "kantha", file: "kantha", hex: "#3446C4", en: "Kantha", bn: "কাঁথা", note: ["Indigo running stitch", "কাঁথা ফোঁড়ের নীল"] },
@@ -77,7 +77,7 @@ export function DashboardShowcase() {
               <Image
                 key={`${p.id}-${lang}`}
                 src={`/landing/dash-${p.id}-${lang}.png`}
-                alt={t(`BechaKena dashboard as seen by ${p.who[0]}: ${p.name}`, `${p.who[1]}-এর চোখে বেচাকেনার ড্যাশবোর্ড: ${p.name}`)}
+                alt={t(`HaatKhata dashboard as seen by ${p.who[0]}: ${p.name}`, `${p.who[1]}-এর চোখে হাটখাতার ড্যাশবোর্ড: ${p.name}`)}
                 fill
                 sizes="(min-width: 1240px) 1100px, 100vw"
                 className={cn("object-cover object-top transition-opacity duration-500", preset === p.id ? "opacity-100" : "opacity-0")}
@@ -207,7 +207,7 @@ function ColourStudio() {
     <div className="mt-32 grid items-center gap-12 md:mt-40 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-16">
       <div>
         <h3 className="text-balance font-display text-[30px] font-semibold leading-[1.08] tracking-[-0.03em] text-ink md:text-[40px]">{t("Same dashboard, in your shop's colour.", "একই ড্যাশবোর্ড, আপনার দোকানের রঙে।")}</h3>
-        <p className="mt-4 text-[16.5px] leading-relaxed text-ink-3">{t("Upload your logo and BechaKena suggests colours from it, for the app, invoices and labels.", "লোগো দিলে বেচাকেনা তা থেকে রং সাজিয়ে দেয় — অ্যাপ, ইনভয়েস আর লেবেলে।")}</p>
+        <p className="mt-4 text-[16.5px] leading-relaxed text-ink-3">{t("Upload your logo and HaatKhata suggests colours from it, for the app, invoices and labels.", "লোগো দিলে হাটখাতা তা থেকে রং সাজিয়ে দেয় — অ্যাপ, ইনভয়েস আর লেবেলে।")}</p>
 
         <div role="radiogroup" aria-label={t("Shop colour", "দোকানের রং")} className="mt-8 space-y-1">
           {COLOURS.map((c, i) => {

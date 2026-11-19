@@ -5,6 +5,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 function key() {
   const secret = process.env.AUTH_SECRET;
   if (!secret && process.env.NODE_ENV === "production") throw new Error("AUTH_SECRET is not set");
+  // Pre-rename salt; changing it makes stored ciphertext unreadable.
   return createHash("sha256").update(`bechakena:enc:v1:${secret ?? "dev-only-secret"}`).digest();
 }
 

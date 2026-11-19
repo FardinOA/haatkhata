@@ -21,7 +21,7 @@ import { rateLimit } from "./rate-limit";
 const { products, variants, businesses, categories } = schema;
 
 export const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
-const RESERVED = new Set(["admin", "api", "app", "login", "welcome", "dashboard", "settings", "bechakena", "shop", "store", "help", "support", "www"]);
+const RESERVED = new Set(["admin", "api", "app", "login", "welcome", "dashboard", "settings", "haatkhata", "bechakena", "shop", "store", "help", "support", "www"]);
 
 export function validateSlug(slug: string) {
   if (!SLUG_RE.test(slug)) return "Use 3–40 lowercase letters, numbers or dashes.";

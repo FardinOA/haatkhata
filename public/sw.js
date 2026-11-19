@@ -1,5 +1,5 @@
 /*
- * BechaKena service worker — keeps the app shell available offline.
+ * HaatKhata service worker — keeps the app shell available offline.
  * Business data lives on the device (local-first), so once the shell and
  * static assets are cached, selling works without a connection (SRS NFR-REL-03).
  */
@@ -63,7 +63,7 @@ self.addEventListener("fetch", (event) => {
 /* ---------------------------------------------------------------- push (platform) */
 // Web push (SRS FR-NOT-02): new orders from staff, low stock, COD overdue, daily summary.
 self.addEventListener("push", (event) => {
-  let data = { title: "BechaKena", body: "", url: "/dashboard", tag: undefined };
+  let data = { title: "HaatKhata", body: "", url: "/dashboard", tag: undefined };
   try {
     data = { ...data, ...event.data.json() };
   } catch {

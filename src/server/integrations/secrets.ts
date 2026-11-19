@@ -9,6 +9,7 @@ import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:cr
 function key() {
   const secret = process.env.AUTH_SECRET;
   if (!secret && process.env.NODE_ENV === "production") throw new Error("AUTH_SECRET is not set");
+  // Pre-rename salt; changing it makes saved courier/payment keys unreadable.
   return Buffer.from(hkdfSync("sha256", secret ?? "dev-only-secret", "bechakena", "integration-credentials", 32));
 }
 

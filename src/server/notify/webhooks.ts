@@ -1,7 +1,7 @@
 import "server-only";
 /**
  * Outbound webhooks: signed with HMAC-SHA256, retried with backoff, logged.
- * Signature header: `X-BechaKena-Signature: t=<unix seconds>,v1=<hex hmac of "<t>.<raw body>">`.
+ * Signature header: `X-HaatKhata-Signature: t=<unix seconds>,v1=<hex hmac of "<t>.<raw body>">`.
  */
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, lte, sql } from "drizzle-orm";
@@ -72,7 +72,7 @@ async function deliverOne(d: typeof webhookDeliveries.$inferSelect) {
   try {
     const res = await fetch(ep.url, {
       method: "POST",
-      headers: { "content-type": "application/json", "user-agent": "BechaKena-Webhooks/1", "x-bechakena-event": d.event, "x-bechakena-delivery": d.id, "x-bechakena-signature": signPayload(decrypt(ep.secretEnc), body) },
+      headers: { "content-type": "application/json", "user-agent": "HaatKhata-Webhooks/1", "x-haatkhata-event": d.event, "x-haatkhata-delivery": d.id, "x-haatkhata-signature": signPayload(decrypt(ep.secretEnc), body) },
       body,
       signal: AbortSignal.timeout(10_000),
       redirect: "manual",

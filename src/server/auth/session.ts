@@ -45,7 +45,7 @@ export async function requestOtp(rawPhone: string, ip: string) {
 
   const code = String(randomInt(100000, 1000000));
   await db.insert(otpCodes).values({ phone, codeHash: hmac(`${phone}:${code}`), ip, expiresAt: new Date(Date.now() + OTP_TTL_MS) });
-  const sms = await sendSms(phone, `BechaKena code: ${code}. It expires in 5 minutes. Don't share it with anyone.`);
+  const sms = await sendSms(phone, `HaatKhata code: ${code}. It expires in 5 minutes. Don't share it with anyone.`);
   if (!sms.ok) throw new HttpError(502, "We couldn't send the SMS. Try again in a moment.");
   // Dev convenience: with the console driver (never in production) the code comes back in the response.
   return { phone, devCode: process.env.SMS_DRIVER === "console" && process.env.NODE_ENV !== "production" ? code : undefined };

@@ -26,7 +26,8 @@ async function area(c: Credentials, district: string, areaName: string) {
 export function mapRedx(s: string): CourierStatus {
   const v = s.toLowerCase();
   if (v.includes("partial")) return "partial";
-  if (v === "delivered" || v === "delivery-success") return "delivered";
+  // "paid" (COD settled) comes after delivery and must not reopen the parcel.
+  if (v === "delivered" || v === "delivery-success" || v === "paid") return "delivered";
   if (v.includes("return") || v.includes("cancel")) return "returned";
   if (v.includes("hold")) return "hold";
   if (v.includes("pickup-pending") || v === "ready-for-delivery-pending") return "booked";
@@ -65,8 +66,8 @@ export const redx: CourierAdapter = {
     return { status: mapRedx(res.parcel.status), raw: res.parcel.status };
   },
   parseWebhook(body) {
-    // RedX posts { tracking_number, status, timestamp, message_en }. TODO(redx):
-    // confirm whether a signature header is offered; the callback URL secret authenticates.
+    // RedX posts { tracking_number, status, timestamp, message_en, message_bn, invoice_number }.
+    // It signs nothing: its docs say to put credentials in the callback URL, as ours does.
     const b = body as { tracking_number?: string; status?: string };
     if (!b.tracking_number || !b.status) return null;
     return { consignmentId: b.tracking_number, status: mapRedx(b.status), raw: b.status };

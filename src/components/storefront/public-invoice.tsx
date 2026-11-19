@@ -101,7 +101,7 @@ export async function PublicInvoiceView({ token, lang: langParam }: { token: str
 
         {/* The invoice */}
         <article className="relative mt-4 overflow-hidden rounded-xl border border-line bg-surface shadow-1" aria-labelledby="inv-h">
-          {b.trial && <TrialStamp label={t("BechaKena trial", "বেচাকেনা ট্রায়াল")} />}
+          {b.trial && <TrialStamp label={t("HaatKhata trial", "হাটখাতা ট্রায়াল")} />}
           <div className="flex flex-col items-start justify-between gap-3 border-b border-line px-5 py-4 sm:flex-row sm:px-6">
             <div>
               <h2 id="inv-h" className="font-display text-lg font-semibold text-brand-ink">
@@ -180,7 +180,7 @@ export async function PublicInvoiceView({ token, lang: langParam }: { token: str
           <p className="mt-3">
             {b.trial ? t("Trial invoice made with", "ট্রায়াল ইনভয়েস তৈরি") : t("Invoice made with", "ইনভয়েস তৈরি")}{" "}
             <Link href="/" className="font-semibold text-ink-3 hover:text-ink">
-              BechaKena
+              HaatKhata
             </Link>
           </p>
         </footer>

@@ -259,8 +259,8 @@ export function ImportSheet({ open, onClose }: { open: boolean; onClose: () => v
                   <p className="mt-0.5 text-[13px] text-ink-3">
                     {t("One row per size or colour. Rows with the same name become one product with variants.", "প্রতি সাইজ বা রঙের জন্য এক সারি। একই নামের সারি মিলে এক পণ্য হবে।")}
                   </p>
-                  <Button size="sm" className="mt-2" icon={<DownloadSimple className="size-4" />} onClick={() => downloadText("bechakena-products-template.csv", toCSV([[...COLUMNS], ...TEMPLATE_ROWS]))}>
-                    bechakena-products-template.csv
+                  <Button size="sm" className="mt-2" icon={<DownloadSimple className="size-4" />} onClick={() => downloadText("haatkhata-products-template.csv", toCSV([[...COLUMNS], ...TEMPLATE_ROWS]))}>
+                    haatkhata-products-template.csv
                   </Button>
                 </div>
               </li>

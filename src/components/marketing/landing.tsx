@@ -14,26 +14,10 @@ import { Hero } from "./hero";
 import { JourneyScroll } from "./journey-scroll";
 import { PhoneScan } from "./phone-scan";
 import { RouteMap } from "./route-map";
-import { H2, JamdaniWeave, LogoMark, makeN, SiteCtx, SWATCHES, useSite, useSmoothScroll, type L, type Site } from "./site-kit";
+import { BASE_VARS, H2, JamdaniWeave, LogoMark, makeN, SiteCtx, SWATCHES, useSite, useSmoothScroll, type L, type Site } from "./site-kit";
 import "lenis/dist/lenis.css";
 import { normalizePhone } from "@/lib/domain";
 import { themeVars } from "@/lib/theme";
-
-// White pages alternating with one soft warm grey, near-black ink and a lime accent.
-const BASE_VARS = {
-  "--r": "14px",
-  "--canvas": "#FFFFFF",
-  "--surface": "#FFFFFF",
-  "--surface-2": "#F5F5F2",
-  "--sunken": "#ECECE7",
-  "--line": "#E7E7E1",
-  "--line-strong": "#D7D7CF",
-  "--ink": "#121212",
-  "--ink-2": "#45453F",
-  "--ink-3": "#6E6E67",
-  "--ink-4": "#A3A39B",
-  "--font-display-active": "var(--font-anek)",
-};
 
 export function Landing() {
   const [lang, setLang] = useState<L>("bn");
@@ -134,7 +118,7 @@ function Nav({ signedIn }: { signedIn: boolean }) {
       <nav className="mx-auto flex h-14 max-w-[1120px] items-center gap-2 px-5 md:px-8" aria-label={t("Main", "প্রধান")}>
         <Link href="/" className="mr-auto flex shrink-0 items-center gap-2 md:mr-0 xl:w-[290px]">
           <LogoMark size={28} />
-          <span className="font-display text-[17px] font-semibold tracking-[-0.01em]">{t("BechaKena", "বেচাকেনা")}</span>
+          <span className="font-display text-[17px] font-semibold tracking-[-0.01em]">{t("HaatKhata", "হাটখাতা")}</span>
         </Link>
         <div className="hidden flex-1 items-center justify-center gap-1 md:flex">
           {links.map(([href, label]) => (

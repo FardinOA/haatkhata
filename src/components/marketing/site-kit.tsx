@@ -20,6 +20,22 @@ export type Site = {
   setAccent: (hex: string) => void;
 };
 
+// White pages alternating with one soft warm grey, near-black ink and a lime accent.
+export const BASE_VARS = {
+  "--r": "14px",
+  "--canvas": "#FFFFFF",
+  "--surface": "#FFFFFF",
+  "--surface-2": "#F5F5F2",
+  "--sunken": "#ECECE7",
+  "--line": "#E7E7E1",
+  "--line-strong": "#D7D7CF",
+  "--ink": "#121212",
+  "--ink-2": "#45453F",
+  "--ink-3": "#6E6E67",
+  "--ink-4": "#A3A39B",
+  "--font-display-active": "var(--font-anek)",
+};
+
 export const SiteCtx = createContext<Site | null>(null);
 
 export function useSite() {
@@ -117,7 +133,7 @@ export function JamdaniWeave({ className, color = "currentColor", opacity = 0.14
 }
 
 /**
- * BechaKena's own mark (same drawing as app/icon.svg): a parcel with the
+ * HaatKhata's own mark (same drawing as app/icon.svg): a parcel with the
  * marigold cash dot, tinted with the site's accent.
  */
 export function LogoMark({ size = 36, className }: { size?: number; className?: string }) {

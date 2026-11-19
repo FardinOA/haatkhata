@@ -1,5 +1,5 @@
 /**
- * Grants (or with --revoke, removes) BechaKena super-admin access.
+ * Grants (or with --revoke, removes) HaatKhata super-admin access.
  *   npm run admin:grant -- 01711234567
  *   npm run admin:grant -- 01711234567 --revoke
  */

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
-  BechaKena design tokens.
+  HaatKhata design tokens.
   Neutrals are fixed; everything prefixed --brand-* is generated at runtime from
   the business's chosen accent (see src/lib/theme.ts) and written onto <html>.
   The values below are the default "Jamdani" ramp so the server render is correct.

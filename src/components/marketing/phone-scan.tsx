@@ -234,7 +234,7 @@ export function PhoneScan() {
             <div className="mx-auto w-[230px] shrink-0 rounded-[40px] bg-ink p-[9px] shadow-[0_30px_60px_-24px_rgb(18_18_18/0.5)]">
               <div className="flex h-[452px] flex-col overflow-hidden rounded-[32px] bg-canvas">
                 <div className="flex items-center justify-between px-4 pb-2 pt-4">
-                  <span className="font-display text-[12px] font-semibold">{t("BechaKena", "বেচাকেনা")}</span>
+                  <span className="font-display text-[12px] font-semibold">{t("HaatKhata", "হাটখাতা")}</span>
                   <span className={cn("inline-flex h-5 items-center gap-1 rounded-full px-2 text-[10px] font-semibold", paired ? "bg-ok-soft text-ok" : "bg-sunken text-ink-3")}>
                     <span className={cn("size-1 rounded-full", paired ? "bg-ok" : "animate-pulse bg-warn")} />
                     {paired ? t("Counter connected", "কাউন্টার যুক্ত") : t("Not paired", "যুক্ত নয়")}

@@ -47,7 +47,7 @@ const EXAMPLES: Route[] = [
 /**
  * Not a logo strip: the apps a seller already uses, laid out as a route map in
  * the order their money moves. One stop per column is lit, a line runs through
- * them, and the route ends as the single order row BechaKena keeps for it.
+ * them, and the route ends as the single order row HaatKhata keeps for it.
  */
 export function RouteMap() {
   const { t, n, lang } = useSite();
@@ -79,7 +79,7 @@ export function RouteMap() {
       <div className="mx-auto max-w-[1120px] px-5 py-16 md:px-8 md:py-24">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <h2 id="route-title" className="max-w-[560px] text-balance font-display text-[28px] font-semibold leading-[1.12] tracking-[-0.025em] text-ink md:text-[36px]">
-            {t("Your orders already travel this route.", "আপনার অর্ডার এই পথেই চলে।")} <span className="text-ink-3">{t("BechaKena keeps the whole map.", "বেচাকেনা পুরো পথটা মনে রাখে।")}</span>
+            {t("Your orders already travel this route.", "আপনার অর্ডার এই পথেই চলে।")} <span className="text-ink-3">{t("HaatKhata keeps the whole map.", "হাটখাতা পুরো পথটা মনে রাখে।")}</span>
           </h2>
           <p className="flex items-center gap-2 text-[13.5px] text-ink-3">
             <HandTap className="size-[18px] text-ink-2" />
@@ -151,7 +151,7 @@ function Mark({ stop, className }: { stop: Stop; className?: string }) {
   );
 }
 
-/** Where the route ends: the one order row BechaKena keeps, drawn like the app's journey rail. */
+/** Where the route ends: the one order row HaatKhata keeps, drawn like the app's journey rail. */
 function OrderRow({ route, live }: { route: Route; live: boolean }) {
   const { t, n } = useSite();
   const [from, courier, money] = [ORDERS[route[0]], COURIERS[route[1]], MONEY[route[2]]];

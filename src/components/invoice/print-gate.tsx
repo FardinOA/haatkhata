@@ -107,7 +107,7 @@ export function usePrintGate() {
     <>
       <style>{`@media print { html:not([data-print-ok]) [data-print-gated] { display: none !important; } html:not([data-print-ok]) .print-locked { display: block !important; } }`}</style>
       <p className="print-locked hidden p-12 text-center text-[15px] text-ink">
-        {t("Printing needs a plan. Open BechaKena → Settings → Plan & billing.", "প্রিন্ট করতে প্ল্যান লাগবে। বেচাকেনা → সেটিংস → প্ল্যান ও বিলিং খুলুন।")}
+        {t("Printing needs a plan. Open HaatKhata → Settings → Plan & billing.", "প্রিন্ট করতে প্ল্যান লাগবে। হাটখাতা → সেটিংস → প্ল্যান ও বিলিং খুলুন।")}
       </p>
       <Dialog
       open={!!blocked}

@@ -98,7 +98,7 @@ export function FaqChat() {
             <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-surface bg-ok" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-[16px] font-semibold leading-tight text-ink">{t("BechaKena team", "বেচাকেনা টিম")}</p>
+            <p className="font-display text-[16px] font-semibold leading-tight text-ink">{t("HaatKhata team", "হাটখাতা টিম")}</p>
             <p className="truncate text-[12.5px] text-ink-3">{t("Answers here, a real person on WhatsApp", "উত্তর এখানেই, মানুষ আছেন হোয়াটসঅ্যাপে")}</p>
           </div>
         </div>
@@ -107,7 +107,7 @@ export function FaqChat() {
         <div className="relative bg-surface-2">
           <div role="log" aria-live="polite" aria-label={t("Questions and answers", "প্রশ্ন ও উত্তর")} className="relative flex min-h-[360px] flex-col gap-3 px-4 py-6 md:min-h-[420px] md:px-8 md:py-8">
             <Bot>
-              <Bubble>{t("Hi! 👋 This is the BechaKena team. What would you like to know?", "আসসালামু আলাইকুম! 👋 বেচাকেনা টিম থেকে বলছি। কী জানতে চান?")}</Bubble>
+              <Bubble>{t("Hi! 👋 This is the HaatKhata team. What would you like to know?", "আসসালামু আলাইকুম! 👋 হাটখাতা টিম থেকে বলছি। কী জানতে চান?")}</Bubble>
             </Bot>
             {thread.map((m) =>
               m.from === "me" ? (
@@ -267,7 +267,7 @@ function CatalogueProof() {
           </div>
         ))}
       </div>
-      <p className="mt-3 truncate text-[12px] text-ink-3">bechakena.app/s/{slug}</p>
+      <p className="mt-3 truncate text-[12px] text-ink-3">haatkhata.com/s/{slug}</p>
       <p className="truncate font-display text-[15px] font-semibold text-ink">
         {shop.trim() || t("Your Shop", "আপনার দোকান")} · {t("catalogue", "ক্যাটালগ")}
       </p>

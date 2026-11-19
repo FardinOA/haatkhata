@@ -1,53 +1,69 @@
 import "server-only";
 /**
- * Carrybee merchant API. Client-credential token, then store-scoped orders.
- * TODO(carrybee): Carrybee shares its API reference with onboarded
- * merchants; confirm paths and field names below with your account manager.
+ * Carrybee merchant API. Every request carries Client-ID, Client-Secret and
+ * Client-Context headers; there is no token step.
+ * TODO(carrybee): built from three independent open-source integrations,
+ * because Carrybee shares its reference only with onboarded merchants.
+ * Confirm with your account manager: the status path (/orders/{id}/details
+ * here; one source uses /orders/track/{id}) and the webhook auth header
+ * (the callback URL key authenticates meanwhile).
  */
 import { call, requireCreds, type CourierAdapter, type CourierStatus, type Credentials } from "./types";
 
 const BASE = process.env.CARRYBEE_BASE_URL ?? "https://developers.carrybee.com/api/v2";
-const tokens = new Map<string, { token: string; until: number }>();
 
-async function token(c: Credentials) {
-  requireCreds("carrybee", c, ["clientId", "clientSecret", "storeId"]);
-  const hit = tokens.get(c.clientId);
-  if (hit && hit.until > Date.now()) return hit.token;
-  const res = await call<{ access_token: string; expires_in?: number }>("carrybee", `${BASE}/auth/token`, { method: "POST", body: JSON.stringify({ client_id: c.clientId, client_secret: c.clientSecret }) });
-  tokens.set(c.clientId, { token: res.access_token, until: Date.now() + ((res.expires_in ?? 3600) - 300) * 1000 });
-  return res.access_token;
+function h(c: Credentials) {
+  requireCreds("carrybee", c, ["clientId", "clientSecret", "clientContext", "storeId"]);
+  return { "Client-ID": c.clientId, "Client-Secret": c.clientSecret, "Client-Context": c.clientContext };
 }
 
 export function mapCarrybee(s: string): CourierStatus {
-  const v = s.toLowerCase();
+  const v = s.toLowerCase().replace(/[_-]+/g, " ").trim();
   if (v.includes("partial")) return "partial";
-  if (v === "delivered") return "delivered";
-  if (v.includes("return") || v.includes("cancel")) return "returned";
+  // "paid" comes after delivery and must not reopen the parcel.
+  if (v === "delivered" || v === "paid") return "delivered";
+  if (v.includes("return") || v.includes("cancel") || v === "delivery failed") return "returned";
   if (v.includes("hold")) return "hold";
-  if (v.includes("pending") || v.includes("created")) return "booked";
+  if (v.includes("pending") || v.includes("created") || v.includes("pickup requested")) return "booked";
   return "in_transit";
 }
 
 export const carrybee: CourierAdapter = {
   provider: "carrybee",
   async test(c) {
-    await token(c);
+    await call("carrybee", `${BASE}/stores`, { headers: h(c) });
   },
   async create(c, r) {
-    const res = await call<{ data: { consignment_id: string; delivery_fee?: number } }>("carrybee", `${BASE}/stores/${encodeURIComponent(c.storeId)}/orders`, {
+    // Carrybee resolves city and zone from the address when their ids are left out.
+    const res = await call<{ data: { order: { consignment_id: string; delivery_fee?: number } } }>("carrybee", `${BASE}/orders`, {
       method: "POST",
-      headers: { authorization: `Bearer ${await token(c)}` },
-      body: JSON.stringify({ merchant_order_id: r.invoice, recipient_name: r.recipientName, recipient_phone: r.recipientPhone, recipient_address: r.recipientAddress, area: r.area, district: r.district, collectable_amount: Math.round(r.codAmount), item_quantity: r.itemCount, item_weight: r.weightKg ?? 0.5, note: r.note ?? "" }),
+      headers: h(c),
+      body: JSON.stringify({
+        store_id: c.storeId,
+        merchant_order_id: r.invoice,
+        delivery_type: 1,
+        product_type: 1,
+        recipient_name: r.recipientName,
+        recipient_phone: r.recipientPhone,
+        recipient_address: `${r.recipientAddress}, ${r.area}, ${r.district}`,
+        item_weight: Math.round((r.weightKg ?? 0.5) * 1000), // grams
+        item_quantity: r.itemCount,
+        collectable_amount: Math.round(r.codAmount),
+        product_description: r.itemDescription.slice(0, 250),
+        special_instruction: r.note ?? "",
+      }),
     });
-    return { consignmentId: res.data.consignment_id, trackingCode: res.data.consignment_id, fee: res.data.delivery_fee, raw: res };
+    const o = res.data.order;
+    return { consignmentId: o.consignment_id, trackingCode: o.consignment_id, fee: o.delivery_fee, raw: res };
   },
   async status(c, id) {
-    const res = await call<{ data: { status: string } }>("carrybee", `${BASE}/orders/${encodeURIComponent(id)}`, { headers: { authorization: `Bearer ${await token(c)}` } });
-    return { status: mapCarrybee(res.data.status), raw: res.data.status };
+    const res = await call<{ data: { transfer_status: string } }>("carrybee", `${BASE}/orders/${encodeURIComponent(id)}/details`, { headers: h(c) });
+    return { status: mapCarrybee(res.data.transfer_status), raw: res.data.transfer_status };
   },
   parseWebhook(body) {
-    const b = body as { consignment_id?: string; status?: string };
-    if (!b.consignment_id || !b.status) return null;
-    return { consignmentId: b.consignment_id, status: mapCarrybee(b.status), raw: b.status };
+    const b = body as { consignment_id?: string; event?: string; order_status?: string };
+    const raw = b.order_status ?? b.event?.replace(/^order\./, "");
+    if (!b.consignment_id || !raw) return null;
+    return { consignmentId: b.consignment_id, status: mapCarrybee(raw), raw };
   },
 };

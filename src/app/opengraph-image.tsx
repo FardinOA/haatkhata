@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "BechaKena — every order, from the chat to the cash";
+export const alt = "HaatKhata — every order, from the chat to the cash";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -12,7 +12,7 @@ export default function OgImage() {
       <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 72, background: "#F3F4F0", color: "#16181A", fontFamily: "sans-serif" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
           <div style={{ width: 64, height: 64, borderRadius: 18, background: "#0E6B53", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 34, fontWeight: 700 }}>B</div>
-          <div style={{ fontSize: 36, fontWeight: 700 }}>BechaKena</div>
+          <div style={{ fontSize: 36, fontWeight: 700 }}>HaatKhata</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.02, letterSpacing: -2, maxWidth: 900 }}>Every order, from the chat to the cash.</div>

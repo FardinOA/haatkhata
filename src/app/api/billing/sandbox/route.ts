@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 h1{font-size:20px;margin:14px 0 4px}.amt{font-size:34px;font-weight:700;margin:12px 0}.muted{color:#686E74;font-size:13px}
 button{width:100%;height:48px;border-radius:12px;border:0;font:600 15px system-ui;cursor:pointer;margin-top:10px}
 .pay{background:#0E6B53;color:#fff}.no{background:#fff;border:1px solid #CDD1C8;color:#16181A}</style></head>
-<body><form class="card" method="post"><span class="tag">Sandbox — no real money</span><h1>BechaKena ${esc(p.plan)} plan</h1>
+<body><form class="card" method="post"><span class="tag">Sandbox — no real money</span><h1>HaatKhata ${esc(p.plan)} plan</h1>
 <p class="muted">${p.months} month${p.months > 1 ? "s" : ""} · paying with ${esc(p.method)}</p><div class="amt">৳${p.amount.toLocaleString("en-IN")}</div>
 <input type="hidden" name="payment" value="${esc(p.id)}"><button class="pay" name="result" value="paid">Approve payment</button><button class="no" name="result" value="cancelled">Cancel</button></form></body></html>`;
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });

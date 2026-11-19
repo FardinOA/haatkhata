@@ -1,6 +1,6 @@
-# Design DNA — BechaKena POS
+# Design DNA — HaatKhata POS
 
-Binding visual contract for the BechaKena web app. Companion docs: [../pos-srs.md](../pos-srs.md), [../pos-business-plan.md](../pos-business-plan.md).
+Binding visual contract for the HaatKhata web app. Companion docs: [../pos-srs.md](../pos-srs.md), [../pos-business-plan.md](../pos-business-plan.md).
 
 ## Evidence binding
 
@@ -12,7 +12,7 @@ Binding visual contract for the BechaKena web app. Companion docs: [../pos-srs.m
 | Fixed status colours for order lifecycle | Orders move Draft → Confirmed → Packed → Shipped → Delivered/Returned; stock moves with them | SRS §3.5 | Status reads identically regardless of brand theme |
 | Anek Bangla display + Geist UI + Noto Sans Bengali body | Full Bangla UI with correct conjuncts; Bangla numerals optional; money columns must align | SRS §2.5, NFR-USE-02 | Anek covers both scripts in one voice; Geist has tabular figures for ledgers |
 | Condensed money figures (Anek `wdth` 88) | Dashboard KPIs, totals at 360 px wide | SRS NFR-USE-01, FR-RPT-01 | Large ৳ amounts fit narrow screens without truncation |
-| Parcel-journey rail as the signature | The product's core difference: an order has a life after the sale | SRS §1.2; business plan §1 "nobody combines POS with the online order lifecycle" | Makes the differentiator visible on the first screen |
+| Parcel-journey rail as the signature | The product's core difference: an order has a life after the sale | SRS §1.2; business plan §1 "one stock for the counter and the page" | Makes the differentiator visible on the first screen |
 | Thermal-receipt paper treatment for invoice previews | Invoices print on 58/80 mm thermal paper and A4/A5 | SRS FR-INV-02, §5.2 | Preview looks like the artefact the seller will hand over |
 | Patterned textile swatches as product art | Demo seller is a clothing/handloom boutique; most sellers have no product photos at first | business plan §2; SRS FR-PRD-01 (images optional) | Every product has a recognisable thumbnail before a photo exists |
 | Customisable dashboard with role presets | Owner, Manager, Sales, Packer, Accountant need different things | SRS §2.3, FR-RPT-01 | Each role lands on the widgets it acts on |

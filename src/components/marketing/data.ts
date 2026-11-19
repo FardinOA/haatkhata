@@ -13,7 +13,7 @@ export type Proof = "catalogue" | "offline" | "print" | "cod" | "staff" | "data"
 export const FAQ: { q: [string, string]; a: [string, string]; proof?: Proof; kw: string[]; chip?: false }[] = [
   {
     q: ["Do I need a website?", "ওয়েবসাইট লাগবে?"],
-    a: ["No. BechaKena is built for sellers who take orders in Facebook, Instagram and WhatsApp chats. If you want one, every shop gets a catalogue link to share.", "না। বেচাকেনা তৈরি তাদের জন্য যারা ফেসবুক, ইনস্টাগ্রাম আর হোয়াটসঅ্যাপ চ্যাটে অর্ডার নেন। চাইলে প্রতিটা দোকান শেয়ার করার মতো একটা ক্যাটালগ লিংকও পায়।"],
+    a: ["No. HaatKhata is built for sellers who take orders in Facebook, Instagram and WhatsApp chats. If you want one, every shop gets a catalogue link to share.", "না। হাটখাতা তৈরি তাদের জন্য যারা ফেসবুক, ইনস্টাগ্রাম আর হোয়াটসঅ্যাপ চ্যাটে অর্ডার নেন। চাইলে প্রতিটা দোকান শেয়ার করার মতো একটা ক্যাটালগ লিংকও পায়।"],
     proof: "catalogue",
     kw: ["website", "site", "web", "catalog", "link", "domain", "ওয়েবসাইট", "সাইট", "ক্যাটালগ", "লিংক", "ওয়েব"],
   },
@@ -37,7 +37,7 @@ export const FAQ: { q: [string, string]; a: [string, string]; proof?: Proof; kw:
   },
   {
     q: ["How does it handle couriers and COD?", "কুরিয়ার আর COD কীভাবে সামলায়?"],
-    a: ["Every order carries its courier, tracking number and the exact COD to collect. When the courier pays you, mark the payout and BechaKena shows what's still out there, courier by courier.", "প্রতিটা অর্ডারে কুরিয়ার, ট্র্যাকিং নম্বর আর কত COD আদায় করতে হবে তা থাকে। কুরিয়ার টাকা দিলে পেআউট মার্ক করুন — কোন কুরিয়ারের কাছে কত বাকি সব দেখা যায়।"],
+    a: ["Every order carries its courier, tracking number and the exact COD to collect. When the courier pays you, mark the payout and HaatKhata shows what's still out there, courier by courier.", "প্রতিটা অর্ডারে কুরিয়ার, ট্র্যাকিং নম্বর আর কত COD আদায় করতে হবে তা থাকে। কুরিয়ার টাকা দিলে পেআউট মার্ক করুন — কোন কুরিয়ারের কাছে কত বাকি সব দেখা যায়।"],
     proof: "cod",
     kw: ["courier", "cod", "cash on delivery", "steadfast", "sundarban", "delivery", "parcel", "tracking", "payout", "কুরিয়ার", "ডেলিভারি", "পার্সেল", "ক্যাশ", "স্টেডফাস্ট", "সুন্দরবন", "ট্র্যাকিং"],
   },

@@ -1,6 +1,6 @@
-# BechaKena — web prototype
+# HaatKhata — web prototype
 
-A working, clickable prototype of BechaKena POS: stock, sales and invoicing for online and social sellers in Bangladesh. It implements the MVP flows from [../pos-srs.md](../pos-srs.md) against on-device demo data, so it can go straight into seller usability tests (business plan §12, step 4).
+A working, clickable prototype of HaatKhata POS: stock, sales and invoicing for online and social sellers in Bangladesh. It implements the MVP flows from [../pos-srs.md](../pos-srs.md) against on-device demo data, so it can go straight into seller usability tests (business plan §12, step 4).
 
 ## Run it
 

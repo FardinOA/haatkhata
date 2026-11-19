@@ -248,7 +248,7 @@ export function ApiSettings() {
                 try {
                   const r = await api<{ secret: string }>("/api/outbound-webhooks", { method: "POST", json: newHook });
                   setNewHook(null);
-                  setRevealed({ title: t("Signing secret", "সাইনিং সিক্রেট"), value: r.secret, note: t("Use it to verify the X-BechaKena-Signature header. Shown once.", "X-BechaKena-Signature যাচাইয়ে ব্যবহার করুন। একবারই দেখানো হবে।") });
+                  setRevealed({ title: t("Signing secret", "সাইনিং সিক্রেট"), value: r.secret, note: t("Use it to verify the X-HaatKhata-Signature header. Shown once.", "X-HaatKhata-Signature যাচাইয়ে ব্যবহার করুন। একবারই দেখানো হবে।") });
                   await load();
                 } catch (e) {
                   toast({ tone: "warn", title: (e as Error).message });
@@ -262,7 +262,7 @@ export function ApiSettings() {
       >
         <div className="mt-2 space-y-3">
           <Field label="URL" htmlFor="hook-url">
-            <Input id="hook-url" data-autofocus placeholder="https://example.com/bechakena" value={newHook?.url ?? ""} onChange={(e) => setNewHook((h) => h && { ...h, url: e.target.value })} />
+            <Input id="hook-url" data-autofocus placeholder="https://example.com/haatkhata" value={newHook?.url ?? ""} onChange={(e) => setNewHook((h) => h && { ...h, url: e.target.value })} />
           </Field>
           <div className="space-y-2">
             {(hooks?.events ?? []).map((ev) => (
